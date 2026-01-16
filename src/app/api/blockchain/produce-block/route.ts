@@ -59,13 +59,15 @@ async function generateRandomTransactions(count: number): Promise<void> {
   for (let i = 0; i < count; i++) {
     const amount = Math.floor(Math.random() * 10000000000) + 1000000; // 0.001 to 10 KLOD
     const txType = TX_TYPES[Math.floor(Math.random() * TX_TYPES.length)];
+    // Random fee between 5000 and 50000 lamports (0.000005 to 0.00005 KLOD)
+    const fee = Math.floor(Math.random() * 45000) + 5000;
 
     // 5% chance of immediate failure
     const isFailed = Math.random() < 0.05;
 
     transactions.push({
       signature: generateSignature(),
-      fee: 5000,
+      fee,
       status: isFailed ? "failed" : "pending",
       transaction_type: txType,
       from_pubkey: generatePubkey(),
@@ -84,8 +86,8 @@ async function generateRandomTransactions(count: number): Promise<void> {
 
 export async function POST() {
   try {
-    // Generate some random transactions for activity (2-8 per block)
-    const randomTxCount = Math.floor(Math.random() * 7) + 2;
+    // Generate some random transactions for activity (1-6 per block)
+    const randomTxCount = Math.floor(Math.random() * 6) + 1;
     await generateRandomTransactions(randomTxCount);
 
     // Get the latest block

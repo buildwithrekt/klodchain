@@ -56,6 +56,9 @@ function TransactionCard({ tx }: { tx: Transaction }) {
           <div className="font-mono text-sm">{formatSol(tx.amount, 4)} KLOD</div>
         )}
         <div className="text-xs text-muted-foreground">
+          Fee: {formatSol(tx.fee, 6)} KLOD
+        </div>
+        <div className="text-xs text-muted-foreground">
           Slot #{tx.slot?.toLocaleString() ?? "pending"}
         </div>
       </div>
