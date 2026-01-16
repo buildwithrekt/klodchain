@@ -52,6 +52,84 @@ const TX_TYPES = [
   "vote",
 ];
 
+// Program IDs (Solana-like format)
+const PROGRAM_IDS = {
+  system: "11111111111111111111111111111111",
+  stake: "Stake11111111111111111111111111111111111",
+  vote: "Vote111111111111111111111111111111111111111",
+  token: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+};
+
+// Sample program names for program_call
+const PROGRAM_NAMES = [
+  "KlodSwap",
+  "KlodNFT",
+  "KlodLend",
+  "KlodDAO",
+  "KlodBridge",
+];
+
+// Generate instruction data based on tx type
+function generateInstructionData(txType: string, amount: number, toPubkey: string | null): object {
+  switch (txType) {
+    case "transfer":
+      return {
+        instruction: "transfer",
+        lamports: amount,
+        source: "wallet",
+        destination: toPubkey,
+      };
+    case "create_account":
+      const space = Math.floor(Math.random() * 1000) + 100;
+      return {
+        instruction: "createAccount",
+        space,
+        lamports: space * 8 + 890880, // rent exempt minimum
+        owner: PROGRAM_IDS.system,
+      };
+    case "stake":
+      return {
+        instruction: "delegate",
+        lamports: amount,
+        validator: toPubkey,
+        epoch: Math.floor(Math.random() * 100),
+      };
+    case "vote":
+      return {
+        instruction: "vote",
+        slots: Array.from({ length: 3 }, () => Math.floor(Math.random() * 10000)),
+        hash: generatePubkey().slice(0, 32),
+        timestamp: Date.now(),
+      };
+    case "program_call":
+      return {
+        instruction: "invoke",
+        program: PROGRAM_NAMES[Math.floor(Math.random() * PROGRAM_NAMES.length)],
+        method: ["swap", "mint", "burn", "stake", "unstake"][Math.floor(Math.random() * 5)],
+        accounts: Math.floor(Math.random() * 5) + 1,
+      };
+    default:
+      return {};
+  }
+}
+
+// Get program ID based on tx type
+function getProgramId(txType: string): string {
+  switch (txType) {
+    case "transfer":
+    case "create_account":
+      return PROGRAM_IDS.system;
+    case "stake":
+      return PROGRAM_IDS.stake;
+    case "vote":
+      return PROGRAM_IDS.vote;
+    case "program_call":
+      return generatePubkey(); // Random program address
+    default:
+      return PROGRAM_IDS.system;
+  }
+}
+
 // Generate random transactions for activity
 async function generateRandomTransactions(count: number): Promise<void> {
   const transactions = [];
@@ -61,9 +139,14 @@ async function generateRandomTransactions(count: number): Promise<void> {
     const txType = TX_TYPES[Math.floor(Math.random() * TX_TYPES.length)];
     // Random fee between 5000 and 50000 lamports (0.000005 to 0.00005 KLOD)
     const fee = Math.floor(Math.random() * 45000) + 5000;
+    const toPubkey = txType === "transfer" || txType === "stake" ? generatePubkey() : null;
 
     // 5% chance of immediate failure
     const isFailed = Math.random() < 0.05;
+
+    const instructionData = isFailed
+      ? { error: FAIL_REASONS[Math.floor(Math.random() * FAIL_REASONS.length)] }
+      : generateInstructionData(txType, amount, toPubkey);
 
     transactions.push({
       signature: generateSignature(),
@@ -71,11 +154,10 @@ async function generateRandomTransactions(count: number): Promise<void> {
       status: isFailed ? "failed" : "pending",
       transaction_type: txType,
       from_pubkey: generatePubkey(),
-      to_pubkey: txType === "transfer" || txType === "stake" ? generatePubkey() : null,
+      to_pubkey: toPubkey,
       amount: txType === "transfer" || txType === "stake" ? amount : null,
-      instruction_data: isFailed
-        ? { error: FAIL_REASONS[Math.floor(Math.random() * FAIL_REASONS.length)] }
-        : null,
+      program_id: getProgramId(txType),
+      instruction_data: instructionData,
     });
   }
 

@@ -184,6 +184,13 @@ export default function TransactionDetailPage() {
                   </div>
                 )}
 
+                {tx.program_id && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Program ID</p>
+                    <p className="font-mono text-sm break-all">{tx.program_id}</p>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Created</p>
                   <p>{formatTimestamp(tx.created_at)}</p>
