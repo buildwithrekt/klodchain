@@ -215,7 +215,7 @@ export default function TransactionDetailPage() {
         </Card>
 
         {/* Transfer Details with Tabs */}
-        {tx.transaction_type === "transfer" && (
+        {(tx.transaction_type === "transfer" || tx.transaction_type === "token_transfer") && (
           <Card>
             <CardHeader>
               <CardTitle>Transfer Details</CardTitle>
