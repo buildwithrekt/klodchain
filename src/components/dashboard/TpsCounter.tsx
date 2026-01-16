@@ -17,9 +17,9 @@ export function TpsCounter() {
   }
 
   return (
-    <div className="flex items-baseline gap-1">
-      <span className="font-semibold tabular-nums">{formatTps(tps)}</span>
-      <span className="text-muted-foreground">tps</span>
+    <div className="flex text-green-400 items-baseline gap-1">
+      <span className="font-semibold text-xs tabular-nums">{formatTps(tps)}</span>
+      <span className="text-xs">tps</span>
     </div>
   );
 }

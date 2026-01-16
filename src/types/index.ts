@@ -75,3 +75,6 @@ export interface SimulationState {
   speed: number;
   tps: number;
 }
+
+// Re-export custom agent types
+export * from "./custom-agent";
