@@ -28,7 +28,7 @@ export interface Transaction {
   block_index: number | null;
   fee: number;
   status: "pending" | "confirmed" | "failed";
-  transaction_type: "transfer" | "create_account" | "program_call" | "stake" | "vote";
+  transaction_type: "transfer" | "token_transfer" | "create_account" | "program_call" | "stake" | "vote";
   from_pubkey: string;
   to_pubkey: string | null;
   amount: number | null;
