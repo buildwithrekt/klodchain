@@ -25,7 +25,7 @@ const AGENTS = [
   { value: "architect", name: "ARC", role: "Network Design" },
   { value: "analyst", name: "SCAN", role: "Chain Monitor" },
   { value: "reviewer", name: "FLUX", role: "TX Processor" },
-  { value: "consensus", name: "SYNC", role: "Consensus Engine" },
+  { value: "consensus", name: "SYNC", role: "Consensus" },
   { value: "oracle", name: "SAGE", role: "Data Oracle" },
 ];
 

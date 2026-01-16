@@ -26,29 +26,33 @@ import {
 import { useBlocks } from "@/hooks/useBlocks";
 import { useTransactions } from "@/hooks/useTransactions";
 import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/utils/formatters";
-import { Search, Blocks, Receipt, ArrowRight, Loader2, User, Code, FileCheck } from "lucide-react";
+import { Search, Blocks, Receipt, ArrowRight, Loader2, User, Code, FileCheck, Wallet, ArrowLeftRight } from "lucide-react";
 
 interface SearchResult {
-  type: "block" | "transaction" | "account" | "validator" | "program";
+  type: "block" | "transaction" | "account" | "validator" | "program" | "wallet" | "wallet_transaction";
   url: string;
   label: string;
   sublabel?: string;
 }
 
-const typeIcons = {
+const typeIcons: Record<SearchResult["type"], React.ComponentType<{ className?: string }>> = {
   block: Blocks,
   transaction: Receipt,
   account: User,
   validator: FileCheck,
   program: Code,
+  wallet: Wallet,
+  wallet_transaction: ArrowLeftRight,
 };
 
-const typeColors = {
+const typeColors: Record<SearchResult["type"], string> = {
   block: "bg-blue-500/10 text-blue-500",
   transaction: "bg-green-500/10 text-green-500",
   account: "bg-purple-500/10 text-purple-500",
   validator: "bg-orange-500/10 text-orange-500",
   program: "bg-pink-500/10 text-pink-500",
+  wallet: "bg-cyan-500/10 text-cyan-500",
+  wallet_transaction: "bg-teal-500/10 text-teal-500",
 };
 
 export default function ExplorerPage() {
@@ -124,19 +128,19 @@ export default function ExplorerPage() {
         <div ref={searchRef} className="relative">
           <Card>
             <CardContent className="pt-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by slot, blockhash, signature, pubkey, program..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => results.length > 0 && setShowResults(true)}
-                  className="pl-10 pr-10"
-                />
-                {searching && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
+            <div className="relative">
+  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+  <Input
+    placeholder="Search by slot, blockhash, signature, pubkey, program..."
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    onFocus={() => results.length > 0 && setShowResults(true)}
+    className="pl-10 pr-10"
+  />
+  {searching && 
+  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+  }
+</div>
             </CardContent>
           </Card>
 
@@ -170,7 +174,7 @@ export default function ExplorerPage() {
                             )}
                           </div>
                           <Badge variant="outline" className="capitalize text-xs shrink-0">
-                            {result.type}
+                            {result.type === "wallet_transaction" ? "wallet tx" : result.type}
                           </Badge>
                         </button>
                       );

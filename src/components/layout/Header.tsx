@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TpsCounter } from "@/components/dashboard/TpsCounter";
-import { WalletButton } from "@/components/wallet/WalletButton";
 import {
   Menu,
   Search,
@@ -70,13 +69,11 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          <WalletButton />
         </div>
 
         {/* Mobile Navigation */}
         <div className="flex lg:hidden items-center gap-2">
           <TpsCounter />
-          <WalletButton />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">

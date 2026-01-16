@@ -1,455 +1,608 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import {
-  PublicKey,
-  Transaction,
-} from "@solana/web3.js";
-import {
-  createTransferInstruction,
-  getAssociatedTokenAddress,
-  createAssociatedTokenAccountInstruction,
-  getAccount,
-  TOKEN_2022_PROGRAM_ID,
-} from "@solana/spl-token";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Wallet, Send, Loader2, ArrowRight, Coins, ExternalLink } from "lucide-react";
+import {
+  Copy,
+  Check,
+  ArrowDownToLine,
+  Send,
+  Clock,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const KLOD_MINT = new PublicKey("8V5ZKPSMixYnBg4t3RtSU9a1daHAh38Pyhea2R3Xpump");
-const KLOD_DECIMALS = 6;
-
-interface TokenBalance {
+interface WalletData {
+  pubkey: string;
+  privateKey?: string;
   balance: number;
-  symbol: string;
-  name: string;
+  transactionCount: number;
+  totalReceived: number;
+  totalSent: number;
+  faucetReady: boolean;
+  faucetCooldownRemaining: number;
 }
 
-interface RecentTransfer {
+interface Transaction {
+  id: string;
   signature: string;
-  from_pubkey: string;
+  from_pubkey: string | null;
   to_pubkey: string;
   amount: number;
+  transaction_type: string;
+  status: string;
   created_at: string;
 }
 
 export default function WalletPage() {
-  const { publicKey, connected, signTransaction } = useWallet();
-  const { connection } = useConnection();
-  const { setVisible } = useWalletModal();
-  const [balance, setBalance] = useState<TokenBalance | null>(null);
-  const [recipient, setRecipient] = useState("");
-  const [amount, setAmount] = useState("");
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [importKey, setImportKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
-  const [recentTransfers, setRecentTransfers] = useState<RecentTransfer[]>([]);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
 
-  // Fetch balance when wallet connects
+  // Load wallet address from localStorage on mount
   useEffect(() => {
-    if (connected && publicKey) {
-      fetchBalance();
-      fetchRecentTransfers();
+    const stored = localStorage.getItem("klodchain_wallet");
+    if (stored) {
+      setWalletAddress(stored);
     } else {
-      setBalance(null);
-      setRecentTransfers([]);
+      setIsPageLoading(false);
     }
-  }, [connected, publicKey]);
+  }, []);
 
-  const fetchBalance = async () => {
-    if (!publicKey) return;
-    setIsFetching(true);
-    try {
-      const res = await fetch(`/api/tokens/balance?wallet=${publicKey.toString()}`);
-      const data = await res.json();
-      if (data.success) {
-        setBalance(data.balance);
+  // Fetch wallet data when address changes
+  useEffect(() => {
+    if (!walletAddress) return;
+
+    const fetchWallet = async () => {
+      setIsPageLoading(true);
+      try {
+        const res = await fetch(`/api/wallet/${walletAddress}`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          setWallet((prev) => ({
+            pubkey: data.wallet.pubkey,
+            privateKey: prev?.privateKey, // Preserve private key if exists
+            balance: data.wallet.balance,
+            transactionCount: data.wallet.transactionCount,
+            totalReceived: data.wallet.totalReceived,
+            totalSent: data.wallet.totalSent,
+            faucetReady: data.wallet.faucetReady,
+            faucetCooldownRemaining: data.wallet.faucetCooldownRemaining,
+          }));
+          setTransactions(data.transactions || []);
+        } else {
+          toast.error("Failed to load wallet");
+          // Clear invalid wallet
+          localStorage.removeItem("klodchain_wallet");
+          setWalletAddress(null);
+        }
+      } catch (error) {
+        console.error("Fetch wallet error:", error);
+        toast.error("Failed to load wallet");
+      } finally {
+        setIsPageLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch balance:", error);
-    } finally {
-      setIsFetching(false);
-    }
-  };
+    };
 
-  const fetchRecentTransfers = async () => {
-    if (!publicKey) return;
-    try {
-      const res = await fetch(`/api/tokens/transfers?wallet=${publicKey.toString()}`);
-      const data = await res.json();
-      if (data.success) {
-        setRecentTransfers(data.transfers);
-      }
-    } catch (error) {
-      console.error("Failed to fetch transfers:", error);
-    }
-  };
+    fetchWallet();
+  }, [walletAddress]);
 
-  const handleTransfer = async () => {
-    if (!publicKey || !signTransaction) {
-      toast.error("Please connect your wallet");
-      return;
-    }
-
-    if (!recipient || !amount) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      toast.error("Invalid amount");
-      return;
-    }
-
-    if (balance && amountNum > balance.balance) {
-      toast.error("Insufficient balance");
-      return;
-    }
-
-    // Validate recipient address
-    let recipientPubkey: PublicKey;
-    try {
-      recipientPubkey = new PublicKey(recipient);
-    } catch {
-      toast.error("Invalid recipient address");
-      return;
-    }
-
+  // Create new wallet
+  const handleCreateWallet = async () => {
     setIsLoading(true);
     try {
-      // Get sender's token account (Token-2022)
-      const senderTokenAccount = await getAssociatedTokenAddress(
-        KLOD_MINT,
-        publicKey,
-        false,
-        TOKEN_2022_PROGRAM_ID
-      );
+      const res = await fetch("/api/wallet/create", { method: "POST" });
+      const data = await res.json();
 
-      // Get recipient's token account (Token-2022)
-      const recipientTokenAccount = await getAssociatedTokenAddress(
-        KLOD_MINT,
-        recipientPubkey,
-        false,
-        TOKEN_2022_PROGRAM_ID
-      );
-
-      // Build transaction
-      const transaction = new Transaction();
-
-      // Check if recipient token account exists, if not create it
-      try {
-        await getAccount(connection, recipientTokenAccount, "confirmed", TOKEN_2022_PROGRAM_ID);
-      } catch {
-        // Account doesn't exist, add instruction to create it
-        transaction.add(
-          createAssociatedTokenAccountInstruction(
-            publicKey, // payer
-            recipientTokenAccount, // associated token account
-            recipientPubkey, // owner
-            KLOD_MINT, // mint
-            TOKEN_2022_PROGRAM_ID // Token-2022 program
-          )
-        );
-      }
-
-      // Add transfer instruction (Token-2022)
-      const amountInSmallestUnit = Math.floor(amountNum * Math.pow(10, KLOD_DECIMALS));
-      transaction.add(
-        createTransferInstruction(
-          senderTokenAccount,
-          recipientTokenAccount,
-          publicKey,
-          amountInSmallestUnit,
-          [],
-          TOKEN_2022_PROGRAM_ID
-        )
-      );
-
-      // Get recent blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-
-      // Sign transaction
-      toast.loading("Please sign the transaction...");
-      const signedTx = await signTransaction(transaction);
-
-      // Send raw transaction
-      toast.loading("Sending transaction...");
-      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-      });
-
-      // Wait for confirmation
-      toast.loading("Confirming transaction...");
-      await connection.confirmTransaction({
-        blockhash,
-        lastValidBlockHeight,
-        signature,
-      }, "confirmed");
-
-      // Record in klodchain
-      await fetch("/api/tokens/transfer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: publicKey.toString(),
-          to: recipient,
-          amount: amountNum,
-          signature: signature,
-          solanaSignature: true,
-        }),
-      });
-
-      toast.success(
-        <div className="space-y-1">
-          <p>Sent {amountNum} KLOD to {recipient.slice(0, 4)}...{recipient.slice(-4)}</p>
-          <div className="flex gap-2 text-xs">
-            <a
-              href={`/explorer/tx/${signature}`}
-              className="text-primary hover:underline"
-            >
-              View on klodchain
-            </a>
-            <span>•</span>
-            <a
-              href={`https://solscan.io/tx/${signature}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              View on Solscan
-            </a>
-          </div>
-        </div>
-      );
-      setRecipient("");
-      setAmount("");
-      fetchBalance();
-      fetchRecentTransfers();
-    } catch (error: unknown) {
-      console.error("Transfer error:", error);
-      const err = error as Error & { message?: string; logs?: string[] };
-
-      if (err.message?.includes("User rejected") || err.message?.includes("rejected")) {
-        toast.error("Transaction cancelled");
-      } else if (err.message?.includes("insufficient")) {
-        toast.error("Insufficient SOL for transaction fee");
-      } else if (err.logs) {
-        console.error("Transaction logs:", err.logs);
-        toast.error(`Transfer failed: ${err.logs[err.logs.length - 1] || err.message}`);
+      if (data.success) {
+        localStorage.setItem("klodchain_wallet", data.wallet.pubkey);
+        setWalletAddress(data.wallet.pubkey);
+        setWallet({
+          pubkey: data.wallet.pubkey,
+          privateKey: data.wallet.privateKey,
+          balance: 0,
+          transactionCount: 0,
+          totalReceived: 0,
+          totalSent: 0,
+          faucetReady: true,
+          faucetCooldownRemaining: 0,
+        });
+        setTransactions([]);
+        setShowPrivateKey(true);
+        toast.success("Wallet created!");
       } else {
-        toast.error(`Transfer failed: ${err.message || "Unknown error"}`);
+        toast.error(data.error || "Failed to create wallet");
       }
+    } catch (error) {
+      console.error("Create wallet error:", error);
+      toast.error("Failed to create wallet");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Import wallet
+  const handleImportWallet = async () => {
+    if (!importKey || importKey.length !== 64) {
+      toast.error("Invalid private key (64 characters required)");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/wallet/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ privateKey: importKey }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem("klodchain_wallet", data.wallet.pubkey);
+        setWalletAddress(data.wallet.pubkey);
+        setImportKey("");
+        toast.success("Wallet imported!");
+      } else {
+        toast.error(data.error || "Wallet not found");
+      }
+    } catch (error) {
+      console.error("Import wallet error:", error);
+      toast.error("Failed to import wallet");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Claim faucet
+  const handleClaimFaucet = async () => {
+    if (!walletAddress || !wallet) return;
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/wallet/faucet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pubkey: walletAddress }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success(`Claimed ${data.amount} $klodchain!`);
+
+        // Update wallet state with new data
+        setWallet((prev) => prev ? {
+          ...prev,
+          balance: data.newBalance,
+          transactionCount: prev.transactionCount + 1,
+          totalReceived: prev.totalReceived + data.amount,
+          faucetReady: false,
+          faucetCooldownRemaining: 24 * 60 * 60 * 1000,
+        } : prev);
+
+        // Add new transaction to list
+        if (data.transaction) {
+          setTransactions((prev) => [data.transaction, ...prev]);
+        }
+      } else {
+        toast.error(data.error || "Failed to claim faucet");
+      }
+    } catch (error) {
+      console.error("Faucet claim error:", error);
+      toast.error("Failed to claim faucet");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Disconnect wallet
+  const handleDisconnect = () => {
+    localStorage.removeItem("klodchain_wallet");
+    setWalletAddress(null);
+    setWallet(null);
+    setTransactions([]);
+    setShowPrivateKey(false);
+  };
+
+  // Copy to clipboard
+  const copyToClipboard = async (text: string, type: "address" | "key") => {
+    await navigator.clipboard.writeText(text);
+    if (type === "address") {
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } else {
+      setCopiedKey(true);
+      setTimeout(() => setCopiedKey(false), 2000);
+    }
+  };
+
+  // Format address
   const formatAddress = (address: string) => {
-    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+    return `${address.slice(0, 15)}...${address.slice(-8)}`;
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString();
+  // Format time ago
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
   };
 
-  return (
-    <div className="container mx-auto px-4 py-6 max-w-2xl">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Wallet className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-xl font-bold">KLOD Wallet</h1>
-          <p className="text-sm text-muted-foreground">
-            Send and receive $KLOD tokens
-          </p>
+  // Format cooldown
+  const formatCooldown = (ms: number) => {
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Loading state with skeletons
+  if (isPageLoading && walletAddress) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-xl">
+        {/* Balance Skeleton */}
+        <Card className="border-primary/30 mb-4">
+          <CardContent className="py-6 text-center">
+            <Skeleton className="h-3 w-24 mx-auto mb-3" />
+            <Skeleton className="h-10 w-48 mx-auto mb-2" />
+            <Skeleton className="h-3 w-40 mx-auto" />
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons Skeleton */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+        </div>
+
+        {/* Faucet Info Skeleton */}
+        <Card className="mb-4">
+          <CardContent className="py-3 flex justify-between items-center">
+            <div>
+              <Skeleton className="h-3 w-12 mb-2" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+            <div className="text-right">
+              <Skeleton className="h-3 w-12 mb-2 ml-auto" />
+              <Skeleton className="h-5 w-16 ml-auto" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="py-4 text-center">
+                <Skeleton className="h-3 w-16 mx-auto mb-2" />
+                <Skeleton className="h-6 w-8 mx-auto" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Transactions Skeleton */}
+        <Card className="mb-4">
+          <CardContent className="py-4">
+            <Skeleton className="h-4 w-40 mb-4" />
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between bg-muted/50 rounded p-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-8 h-8 rounded-full" />
+                    <div>
+                      <Skeleton className="h-4 w-20 mb-1" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bottom Buttons Skeleton */}
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
         </div>
       </div>
+    );
+  }
 
-      {/* Connect Wallet */}
-      {!connected ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Connect Your Wallet</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Connect your Solana wallet to send and receive KLOD tokens
+  // Not connected - Show create/import view
+  if (!walletAddress) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-xl">
+        <Card className="border-primary/30 mb-6">
+          <CardContent className="py-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-muted border border-primary/50 flex items-center justify-center">
+              <div className="w-8 h-8 rotate-45 bg-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              klodchain Wallet
+            </h1>
+            <p className="text-muted-foreground">
+              Create or import your wallet
             </p>
-            <Button onClick={() => setVisible(true)} size="lg" className="gap-2">
-              <Wallet className="h-5 w-5" />
-              Connect Wallet
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardContent className="py-6">
+            <h2 className="font-bold text-foreground mb-2">Create New Wallet</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Generate a new klodchain wallet
+            </p>
+            <Button
+              onClick={handleCreateWallet}
+              disabled={isLoading}
+              className="w-full uppercase tracking-wider"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Create Wallet
             </Button>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-6">
-          {/* Balance Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Your Balance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                {isFetching ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : (
-                  <>
-                    <span className="text-4xl font-bold">
-                      {balance?.balance.toLocaleString() || "0"}
-                    </span>
-                    <span className="text-xl text-muted-foreground">KLOD</span>
-                  </>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Wallet: {publicKey?.toString()}
-              </p>
+
+        <Card className="mb-6">
+          <CardContent className="py-6">
+            <h2 className="font-bold text-foreground mb-2">Import Wallet</h2>
+            <Input
+              placeholder="Enter your private key (64 chars)"
+              value={importKey}
+              onChange={(e) => setImportKey(e.target.value)}
+              className="mb-4 text-sm"
+              type="password"
+            />
+            <Button
+              onClick={handleImportWallet}
+              disabled={isLoading || !importKey}
+              variant="outline"
+              className="w-full uppercase tracking-wider"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Import Wallet
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Link href="/wallet/leaderboard">
+          <Card className="border-dashed hover:border-primary/50 transition-colors cursor-pointer">
+            <CardContent className="py-4 text-center">
+              <span className="text-muted-foreground text-sm">
+                View Leaderboard &rarr;
+              </span>
             </CardContent>
           </Card>
+        </Link>
+      </div>
+    );
+  }
 
-          {/* Transfer Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <Send className="h-4 w-4" />
-                Send KLOD
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="recipient">Recipient Address</Label>
-                <Input
-                  id="recipient"
-                  placeholder="Enter Solana wallet address"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
-                <div className="relative">
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    disabled={isLoading}
-                    className="pr-16"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    KLOD
-                  </span>
-                </div>
-                {balance && (
-                  <button
-                    type="button"
-                    className="text-xs text-primary hover:underline"
-                    onClick={() => setAmount(balance.balance.toString())}
-                  >
-                    Max: {balance.balance.toLocaleString()} KLOD
-                  </button>
-                )}
-              </div>
-              <Button
-                onClick={handleTransfer}
-                disabled={isLoading || !recipient || !amount}
-                className="w-full"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Signing...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send KLOD
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Recent Transfers */}
-          {recentTransfers.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">
-                  Recent Transfers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {recentTransfers.map((tx) => (
-                    <div
-                      key={tx.signature}
-                      className="border-b pb-3 last:border-0 last:pb-0"
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          {tx.from_pubkey === publicKey?.toString() ? (
-                            <span className="text-red-400">-{tx.amount}</span>
-                          ) : (
-                            <span className="text-green-400">+{tx.amount}</span>
-                          )}
-                          <span className="text-muted-foreground">KLOD</span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-muted-foreground">
-                            {tx.from_pubkey === publicKey?.toString()
-                              ? formatAddress(tx.to_pubkey)
-                              : formatAddress(tx.from_pubkey)}
-                          </span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(tx.created_at)}
-                        </span>
-                      </div>
-                      <div className="flex gap-3 mt-1">
-                        <Link
-                          href={`/explorer/tx/${tx.signature}`}
-                          className="text-xs text-primary hover:underline flex items-center gap-1"
-                        >
-                          klodchain
-                        </Link>
-                        <a
-                          href={`https://solscan.io/tx/${tx.signature}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1"
-                        >
-                          Solscan <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Info */}
-          <div className="text-center space-y-1">
-            <p className="text-xs text-muted-foreground">
-              Real SPL token transfers on Solana mainnet
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Transactions are also recorded on klodchain
-            </p>
+  // Connected - Show dashboard
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-xl">
+      {/* Balance Card */}
+      <Card className="border-primary/30 mb-4">
+        <CardContent className="py-6 text-center">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+            Total Balance
+          </p>
+          <div className="flex items-baseline justify-center gap-2 mb-2">
+            <span className="text-4xl font-bold text-foreground">
+              {wallet?.balance?.toLocaleString() ?? 0}
+            </span>
+            <span className="text-xl text-primary">$klodchain</span>
           </div>
-        </div>
+          <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs">
+            <span>{formatAddress(walletAddress)}</span>
+            <button
+              onClick={() => copyToClipboard(walletAddress, "address")}
+              className="text-primary hover:text-primary/80"
+            >
+              {copiedAddress ? <Check className="w-3 h-3" /> : <span className="uppercase">Copy</span>}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Private Key Warning */}
+      {showPrivateKey && wallet?.privateKey && (
+        <Card className="bg-destructive/10 border-destructive/50 mb-4">
+          <CardContent className="py-4">
+            <p className="text-destructive text-xs uppercase tracking-wider mb-2">
+              Save Your Private Key
+            </p>
+            <p className="text-muted-foreground text-sm mb-3">
+              This is shown only once. Save it securely!
+            </p>
+            <div className="bg-background rounded p-3 mb-3 text-xs text-foreground break-all font-mono">
+              {wallet.privateKey}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => copyToClipboard(wallet.privateKey!, "key")}
+                variant="outline"
+                className="flex-1 uppercase text-xs"
+              >
+                {copiedKey ? <><Check className="w-3 h-3 mr-1" /> Copied</> : <><Copy className="w-3 h-3 mr-1" /> Copy</>}
+              </Button>
+              <Button
+                onClick={() => setShowPrivateKey(false)}
+                className="flex-1 uppercase text-xs"
+              >
+                I Saved It
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* Action Buttons */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <Link href="/wallet/send">
+          <Button className="w-full uppercase tracking-wider h-14">
+            <Send className="w-4 h-4 mr-2" />
+            Send
+          </Button>
+        </Link>
+        {wallet?.faucetReady ? (
+          <Button
+            onClick={handleClaimFaucet}
+            disabled={isLoading}
+            variant="outline"
+            className="w-full uppercase tracking-wider h-14"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <ArrowDownToLine className="w-4 h-4 mr-2" />
+            )}
+            {isLoading ? "Claiming..." : "Claim Faucet"}
+          </Button>
+        ) : (
+          <Button disabled variant="outline" className="w-full uppercase tracking-wider h-14">
+            <Clock className="w-4 h-4 mr-2" />
+            {formatCooldown(wallet?.faucetCooldownRemaining ?? 0)}
+          </Button>
+        )}
+      </div>
+
+      {/* Faucet Info */}
+      <Card className="mb-4">
+        <CardContent className="py-3 flex justify-between items-center">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase">Faucet</p>
+            <p className="text-foreground">100 $klodchain / 24h</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground uppercase">Status</p>
+            {wallet?.faucetReady ? (
+              <p className="text-green-400 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-400 rounded-full" /> Ready
+              </p>
+            ) : (
+              <p className="text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" /> {formatCooldown(wallet?.faucetCooldownRemaining ?? 0)}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Transactions</p>
+            <p className="text-xl text-foreground">{wallet?.transactionCount ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Received</p>
+            <p className="text-xl text-foreground">{wallet?.totalReceived ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Sent</p>
+            <p className="text-xl text-foreground">{wallet?.totalSent ?? 0}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Transactions */}
+      <Card className="mb-4">
+        <CardContent className="py-4">
+          <h3 className="font-bold text-foreground uppercase text-sm mb-3">
+            Recent Transactions
+          </h3>
+          {transactions.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-8 h-8 rotate-45 bg-muted mx-auto mb-2" />
+              <p className="text-muted-foreground text-sm">No transactions yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {transactions.slice(0, 5).map((tx) => (
+                <Link
+                  key={tx.signature}
+                  href={`/explorer/tx/${tx.signature}`}
+                  className="flex items-center justify-between bg-muted/50 rounded p-3 hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        tx.to_pubkey === walletAddress
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-destructive/20 text-destructive"
+                      }`}
+                    >
+                      {tx.to_pubkey === walletAddress ? (
+                        <ArrowDownToLine className="w-4 h-4" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-foreground text-sm">
+                        {tx.transaction_type === "faucet_claim" && "Faucet Claim"}
+                        {tx.transaction_type === "token_transfer" && (tx.to_pubkey === walletAddress ? "Received" : "Sent")}
+                        {tx.transaction_type === "transfer" && (tx.to_pubkey === walletAddress ? "Received" : "Sent")}
+                        {tx.transaction_type === "create_account" && "Account Created"}
+                        {tx.transaction_type === "program_call" && "Program Call"}
+                        {!["faucet_claim", "token_transfer", "transfer", "create_account", "program_call"].includes(tx.transaction_type) &&
+                          tx.transaction_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTimeAgo(tx.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <p className={tx.to_pubkey === walletAddress ? "text-green-400" : "text-destructive"}>
+                    {tx.to_pubkey === walletAddress ? "+" : "-"}{tx.amount} $klodchain
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Bottom Buttons */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/wallet/leaderboard">
+          <Button variant="outline" className="w-full uppercase tracking-wider">
+            Leaderboard
+          </Button>
+        </Link>
+        <Button
+          onClick={handleDisconnect}
+          variant="outline"
+          className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 uppercase tracking-wider"
+        >
+          Disconnect
+        </Button>
+      </div>
     </div>
   );
 }

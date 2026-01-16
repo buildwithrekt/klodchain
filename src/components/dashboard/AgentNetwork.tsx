@@ -11,7 +11,7 @@ const AGENT_INFO: Record<string, { displayName: string; description: string }> =
   architect: { displayName: "ARC", description: "Network Design" },
   analyst: { displayName: "SCAN", description: "Chain Monitor" },
   reviewer: { displayName: "FLUX", description: "TX Processor" },
-  consensus: { displayName: "SYNC", description: "Consensus Engine" },
+  consensus: { displayName: "SYNC", description: "Consensus" },
   oracle: { displayName: "SAGE", description: "Data Oracle" },
 };
 

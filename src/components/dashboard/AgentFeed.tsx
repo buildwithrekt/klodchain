@@ -34,7 +34,7 @@ const ROLE_BADGES: Record<string, string> = {
   "Network Design": "bg-purple-500/20 text-purple-400",
   "Chain Monitor": "bg-emerald-500/20 text-emerald-400",
   "TX Processor": "bg-orange-500/20 text-orange-400",
-  "Consensus Engine": "bg-blue-500/20 text-blue-400",
+  "Consensus": "bg-blue-500/20 text-blue-400",
   "Data Oracle": "bg-yellow-500/20 text-yellow-400",
 };
 

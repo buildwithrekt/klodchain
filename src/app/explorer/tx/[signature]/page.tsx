@@ -215,7 +215,7 @@ export default function TransactionDetailPage() {
         </Card>
 
         {/* Transfer Details with Tabs */}
-        {(tx.transaction_type === "transfer" || tx.transaction_type === "token_transfer") && (
+        {(tx.transaction_type === "transfer" || tx.transaction_type === "token_transfer" || tx.transaction_type === "faucet_claim") && (
           <Card>
             <CardHeader>
               <CardTitle>Transfer Details</CardTitle>
@@ -231,12 +231,24 @@ export default function TransactionDetailPage() {
                   <div className="flex items-center gap-4">
                     <div className="flex-1 p-4 rounded-lg border bg-muted/50">
                       <p className="text-sm text-muted-foreground mb-1">From</p>
-                      <p className="font-mono text-sm break-all">{tx.from_pubkey}</p>
+                      {tx.from_pubkey === "FAUCET" ? (
+                        <p className="font-mono text-sm text-green-500">Klodchain Faucet</p>
+                      ) : (
+                        <Link href={`/accounts/${tx.from_pubkey}`} className="font-mono text-sm break-all text-primary hover:underline">
+                          {tx.from_pubkey}
+                        </Link>
+                      )}
                     </div>
                     <ArrowRight className="h-6 w-6 text-muted-foreground shrink-0" />
                     <div className="flex-1 p-4 rounded-lg border bg-muted/50">
                       <p className="text-sm text-muted-foreground mb-1">To</p>
-                      <p className="font-mono text-sm break-all">{tx.to_pubkey || "-"}</p>
+                      {tx.to_pubkey ? (
+                        <Link href={`/accounts/${tx.to_pubkey}`} className="font-mono text-sm break-all text-primary hover:underline">
+                          {tx.to_pubkey}
+                        </Link>
+                      ) : (
+                        <p className="font-mono text-sm">-</p>
+                      )}
                     </div>
                   </div>
 
@@ -250,24 +262,49 @@ export default function TransactionDetailPage() {
 
                 <TabsContent value="balance" className="mt-4">
                   <div className="space-y-3">
-                    {/* Sender Balance Change */}
-                    <div className="flex items-center justify-between p-4 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
-                          <TrendingDown className="h-5 w-5 text-red-500" />
+                    {/* Sender Balance Change (skip for faucet) */}
+                    {tx.from_pubkey !== "FAUCET" && (
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
+                            <TrendingDown className="h-5 w-5 text-red-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Sender</p>
+                            <Link href={`/accounts/${tx.from_pubkey}`} className="font-mono text-sm text-primary hover:underline">
+                              {shortenHash(tx.from_pubkey, 8)}
+                            </Link>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Sender</p>
-                          <p className="font-mono text-sm">{shortenHash(tx.from_pubkey, 8)}</p>
+                        <div className="text-right">
+                          <p className="font-mono text-lg font-semibold text-red-500">
+                            -{formatKlodAmount(tx.amount, tx.instruction_data as Record<string, unknown> | null)} KLOD
+                          </p>
+                          <p className="text-xs text-muted-foreground">+ {formatSol(tx.fee, 6)} fee</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-mono text-lg font-semibold text-red-500">
-                          -{formatKlodAmount(tx.amount, tx.instruction_data as Record<string, unknown> | null)} KLOD
-                        </p>
-                        <p className="text-xs text-muted-foreground">+ {formatSol(tx.fee, 6)} fee</p>
+                    )}
+
+                    {/* Faucet source */}
+                    {tx.from_pubkey === "FAUCET" && (
+                      <div className="flex items-center justify-between p-4 rounded-lg border border-green-500/30 bg-green-500/5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+                            <TrendingUp className="h-5 w-5 text-green-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Source</p>
+                            <p className="font-mono text-sm text-green-500">Klodchain Faucet</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-mono text-lg font-semibold text-green-500">
+                            +{formatKlodAmount(tx.amount, tx.instruction_data as Record<string, unknown> | null)} KLOD
+                          </p>
+                          <p className="text-xs text-muted-foreground">Free tokens</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Recipient Balance Change */}
                     {tx.to_pubkey && (
@@ -278,7 +315,9 @@ export default function TransactionDetailPage() {
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Recipient</p>
-                            <p className="font-mono text-sm">{shortenHash(tx.to_pubkey, 8)}</p>
+                            <Link href={`/accounts/${tx.to_pubkey}`} className="font-mono text-sm text-primary hover:underline">
+                              {shortenHash(tx.to_pubkey, 8)}
+                            </Link>
                           </div>
                         </div>
                         <div className="text-right">
