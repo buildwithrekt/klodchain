@@ -2,7 +2,7 @@
 -- Creates tables for token creation, holdings, and trades
 
 -- Tokens table (memecoins)
-CREATE TABLE tokens (
+CREATE TABLE IF NOT EXISTS tokens (
   address TEXT PRIMARY KEY,  -- ends with "klod"
   name TEXT NOT NULL,
   symbol TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE tokens (
 );
 
 -- Token holdings (who owns how much)
-CREATE TABLE token_holdings (
+CREATE TABLE IF NOT EXISTS token_holdings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   token_address TEXT NOT NULL REFERENCES tokens(address) ON DELETE CASCADE,
   wallet_pubkey TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE token_holdings (
 );
 
 -- Token trades history
-CREATE TABLE token_trades (
+CREATE TABLE IF NOT EXISTS token_trades (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   token_address TEXT NOT NULL REFERENCES tokens(address) ON DELETE CASCADE,
   trader_pubkey TEXT NOT NULL,
@@ -45,32 +45,53 @@ CREATE TABLE token_trades (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_tokens_creator ON tokens(creator_pubkey);
-CREATE INDEX idx_tokens_market_cap ON tokens(market_cap DESC);
-CREATE INDEX idx_tokens_created_at ON tokens(created_at DESC);
-CREATE INDEX idx_token_holdings_wallet ON token_holdings(wallet_pubkey);
-CREATE INDEX idx_token_holdings_token ON token_holdings(token_address);
-CREATE INDEX idx_token_trades_token ON token_trades(token_address);
-CREATE INDEX idx_token_trades_trader ON token_trades(trader_pubkey);
-CREATE INDEX idx_token_trades_created ON token_trades(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tokens_creator ON tokens(creator_pubkey);
+CREATE INDEX IF NOT EXISTS idx_tokens_market_cap ON tokens(market_cap DESC);
+CREATE INDEX IF NOT EXISTS idx_tokens_created_at ON tokens(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_token_holdings_wallet ON token_holdings(wallet_pubkey);
+CREATE INDEX IF NOT EXISTS idx_token_holdings_token ON token_holdings(token_address);
+CREATE INDEX IF NOT EXISTS idx_token_trades_token ON token_trades(token_address);
+CREATE INDEX IF NOT EXISTS idx_token_trades_trader ON token_trades(trader_pubkey);
+CREATE INDEX IF NOT EXISTS idx_token_trades_created ON token_trades(created_at DESC);
 
--- Enable RLS
+-- Enable RLS (safe to run multiple times)
 ALTER TABLE tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE token_holdings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE token_trades ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies (public read, authenticated write via service role)
+-- RLS Policies (drop and recreate to avoid conflicts)
+DROP POLICY IF EXISTS "Tokens are viewable by everyone" ON tokens;
+DROP POLICY IF EXISTS "Tokens can be inserted" ON tokens;
+DROP POLICY IF EXISTS "Tokens can be updated" ON tokens;
 CREATE POLICY "Tokens are viewable by everyone" ON tokens FOR SELECT USING (true);
 CREATE POLICY "Tokens can be inserted" ON tokens FOR INSERT WITH CHECK (true);
 CREATE POLICY "Tokens can be updated" ON tokens FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "Holdings are viewable by everyone" ON token_holdings;
+DROP POLICY IF EXISTS "Holdings can be inserted" ON token_holdings;
+DROP POLICY IF EXISTS "Holdings can be updated" ON token_holdings;
+DROP POLICY IF EXISTS "Holdings can be deleted" ON token_holdings;
 CREATE POLICY "Holdings are viewable by everyone" ON token_holdings FOR SELECT USING (true);
 CREATE POLICY "Holdings can be inserted" ON token_holdings FOR INSERT WITH CHECK (true);
 CREATE POLICY "Holdings can be updated" ON token_holdings FOR UPDATE USING (true);
+CREATE POLICY "Holdings can be deleted" ON token_holdings FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "Trades are viewable by everyone" ON token_trades;
+DROP POLICY IF EXISTS "Trades can be inserted" ON token_trades;
 CREATE POLICY "Trades are viewable by everyone" ON token_trades FOR SELECT USING (true);
 CREATE POLICY "Trades can be inserted" ON token_trades FOR INSERT WITH CHECK (true);
 
--- Enable realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE tokens;
-ALTER PUBLICATION supabase_realtime ADD TABLE token_trades;
+-- Enable realtime (ignore if already added)
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE tokens;
+EXCEPTION WHEN duplicate_object THEN
+  NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE token_trades;
+EXCEPTION WHEN duplicate_object THEN
+  NULL;
+END $$;
