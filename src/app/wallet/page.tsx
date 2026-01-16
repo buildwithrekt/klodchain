@@ -18,7 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, Send, Loader2, ArrowRight, Coins } from "lucide-react";
+import { Wallet, Send, Loader2, ArrowRight, Coins, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 const KLOD_MINT = new PublicKey("8V5ZKPSMixYnBg4t3RtSU9a1daHAh38Pyhea2R3Xpump");
@@ -394,25 +395,43 @@ export default function WalletPage() {
                   {recentTransfers.map((tx) => (
                     <div
                       key={tx.signature}
-                      className="flex items-center justify-between text-sm border-b pb-3 last:border-0 last:pb-0"
+                      className="border-b pb-3 last:border-0 last:pb-0"
                     >
-                      <div className="flex items-center gap-2">
-                        {tx.from_pubkey === publicKey?.toString() ? (
-                          <span className="text-red-400">-{tx.amount}</span>
-                        ) : (
-                          <span className="text-green-400">+{tx.amount}</span>
-                        )}
-                        <span className="text-muted-foreground">KLOD</span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          {tx.from_pubkey === publicKey?.toString()
-                            ? formatAddress(tx.to_pubkey)
-                            : formatAddress(tx.from_pubkey)}
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          {tx.from_pubkey === publicKey?.toString() ? (
+                            <span className="text-red-400">-{tx.amount}</span>
+                          ) : (
+                            <span className="text-green-400">+{tx.amount}</span>
+                          )}
+                          <span className="text-muted-foreground">KLOD</span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">
+                            {tx.from_pubkey === publicKey?.toString()
+                              ? formatAddress(tx.to_pubkey)
+                              : formatAddress(tx.from_pubkey)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(tx.created_at)}
                         </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(tx.created_at)}
-                      </span>
+                      <div className="flex gap-3 mt-1">
+                        <Link
+                          href={`/explorer/tx/${tx.signature}`}
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          klodchain
+                        </Link>
+                        <a
+                          href={`https://solscan.io/tx/${tx.signature}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          Solscan <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
                     </div>
                   ))}
                 </div>
