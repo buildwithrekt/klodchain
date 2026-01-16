@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 interface SearchResult {
-  type: "block" | "transaction" | "account" | "validator" | "program" | "wallet" | "wallet_transaction";
+  type: "block" | "transaction" | "account" | "validator" | "program" | "wallet" | "wallet_transaction" | "token";
   url: string;
   label: string;
   sublabel?: string;
@@ -262,6 +262,24 @@ export async function GET(request: NextRequest) {
             sublabel: `${tx.transaction_type} • ${tx.amount} $klodchain`,
           });
         }
+      }
+    }
+
+    // Search tokens by address, name, or symbol
+    const { data: tokens } = await supabase
+      .from("tokens")
+      .select("address, name, symbol, price, market_cap")
+      .or(`address.ilike.%${query}%,name.ilike.%${query}%,symbol.ilike.%${query}%`)
+      .limit(5);
+
+    if (tokens) {
+      for (const token of tokens) {
+        results.push({
+          type: "token",
+          url: `/token/${token.address}`,
+          label: `${token.name} ($${token.symbol})`,
+          sublabel: `Price: ${token.price < 0.0001 ? token.price.toExponential(2) : token.price.toFixed(6)} KLOD`,
+        });
       }
     }
 

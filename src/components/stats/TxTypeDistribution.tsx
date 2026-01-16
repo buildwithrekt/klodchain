@@ -18,6 +18,9 @@ const COLORS = [
   "hsl(262, 83%, 58%)",  // purple - stake
   "hsl(0, 84%, 60%)",    // red - vote
   "hsl(320, 70%, 55%)",  // pink - faucet_claim
+  "hsl(45, 93%, 47%)",   // gold - token_create
+  "hsl(120, 70%, 50%)",  // bright green - token_buy
+  "hsl(0, 70%, 50%)",    // bright red - token_sell
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -28,6 +31,9 @@ const TYPE_LABELS: Record<string, string> = {
   stake: "Stake",
   vote: "Vote",
   faucet_claim: "Faucet Claim",
+  token_create: "Token Create",
+  token_buy: "Token Buy",
+  token_sell: "Token Sell",
 };
 
 export function TxTypeDistribution({ data, loading }: TxTypeDistributionProps) {

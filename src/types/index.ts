@@ -28,7 +28,7 @@ export interface Transaction {
   block_index: number | null;
   fee: number;
   status: "pending" | "confirmed" | "failed";
-  transaction_type: "transfer" | "token_transfer" | "create_account" | "program_call" | "stake" | "vote" | "faucet_claim";
+  transaction_type: "transfer" | "token_transfer" | "create_account" | "program_call" | "stake" | "vote" | "faucet_claim" | "token_create" | "token_buy" | "token_sell";
   from_pubkey: string;
   to_pubkey: string | null;
   amount: number | null;
@@ -36,6 +36,45 @@ export interface Transaction {
   instruction_data: Record<string, unknown> | null;
   created_at: string;
   confirmed_at: string | null;
+}
+
+export interface Token {
+  address: string;
+  name: string;
+  symbol: string;
+  description: string | null;
+  image_url: string | null;
+  twitter_url: string | null;
+  website_url: string | null;
+  telegram_url: string | null;
+  creator_pubkey: string;
+  total_supply: number;
+  circulating_supply: number;
+  price: number;
+  market_cap: number;
+  volume_24h: number;
+  created_at: string;
+}
+
+export interface TokenHolding {
+  id: string;
+  token_address: string;
+  wallet_pubkey: string;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TokenTrade {
+  id: string;
+  token_address: string;
+  trader_pubkey: string;
+  trade_type: "buy" | "sell";
+  klod_amount: number;
+  token_amount: number;
+  price_per_token: number;
+  signature: string;
+  created_at: string;
 }
 
 export interface Account {

@@ -29,7 +29,7 @@ import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/ut
 import { Search, Blocks, Receipt, ArrowRight, Loader2, User, Code, FileCheck, Wallet, ArrowLeftRight } from "lucide-react";
 
 interface SearchResult {
-  type: "block" | "transaction" | "account" | "validator" | "program" | "wallet" | "wallet_transaction";
+  type: "block" | "transaction" | "account" | "validator" | "program" | "wallet" | "wallet_transaction" | "token";
   url: string;
   label: string;
   sublabel?: string;
@@ -43,6 +43,7 @@ const typeIcons: Record<SearchResult["type"], React.ComponentType<{ className?: 
   program: Code,
   wallet: Wallet,
   wallet_transaction: ArrowLeftRight,
+  token: Receipt,
 };
 
 const typeColors: Record<SearchResult["type"], string> = {
@@ -53,6 +54,7 @@ const typeColors: Record<SearchResult["type"], string> = {
   program: "bg-pink-500/10 text-pink-500",
   wallet: "bg-cyan-500/10 text-cyan-500",
   wallet_transaction: "bg-teal-500/10 text-teal-500",
+  token: "bg-yellow-500/10 text-yellow-500",
 };
 
 export default function ExplorerPage() {

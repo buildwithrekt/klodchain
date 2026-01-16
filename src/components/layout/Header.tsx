@@ -25,6 +25,7 @@ import {
 
 const NAV_LINKS = [
   { href: "/explorer", label: "Explorer", icon: Search },
+  { href: "/tokens", label: "Tokens", icon: Wallet },
   { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/chat", label: "Chat", icon: MessageCircle },
