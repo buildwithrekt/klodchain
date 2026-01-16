@@ -194,10 +194,17 @@ export default function WalletPage() {
       fetchRecentTransfers();
     } catch (error: unknown) {
       console.error("Transfer error:", error);
-      if (error instanceof Error && error.message.includes("User rejected")) {
+      const err = error as Error & { message?: string; logs?: string[] };
+
+      if (err.message?.includes("User rejected") || err.message?.includes("rejected")) {
         toast.error("Transaction cancelled");
+      } else if (err.message?.includes("insufficient")) {
+        toast.error("Insufficient SOL for transaction fee");
+      } else if (err.logs) {
+        console.error("Transaction logs:", err.logs);
+        toast.error(`Transfer failed: ${err.logs[err.logs.length - 1] || err.message}`);
       } else {
-        toast.error("Transfer failed");
+        toast.error(`Transfer failed: ${err.message || "Unknown error"}`);
       }
     } finally {
       setIsLoading(false);
