@@ -12,6 +12,7 @@ import {
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
   getAccount,
+  TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,16 +122,20 @@ export default function WalletPage() {
 
     setIsLoading(true);
     try {
-      // Get sender's token account
+      // Get sender's token account (Token-2022)
       const senderTokenAccount = await getAssociatedTokenAddress(
         KLOD_MINT,
-        publicKey
+        publicKey,
+        false,
+        TOKEN_2022_PROGRAM_ID
       );
 
-      // Get recipient's token account
+      // Get recipient's token account (Token-2022)
       const recipientTokenAccount = await getAssociatedTokenAddress(
         KLOD_MINT,
-        recipientPubkey
+        recipientPubkey,
+        false,
+        TOKEN_2022_PROGRAM_ID
       );
 
       // Build transaction
@@ -138,7 +143,7 @@ export default function WalletPage() {
 
       // Check if recipient token account exists, if not create it
       try {
-        await getAccount(connection, recipientTokenAccount);
+        await getAccount(connection, recipientTokenAccount, "confirmed", TOKEN_2022_PROGRAM_ID);
       } catch {
         // Account doesn't exist, add instruction to create it
         transaction.add(
@@ -146,19 +151,22 @@ export default function WalletPage() {
             publicKey, // payer
             recipientTokenAccount, // associated token account
             recipientPubkey, // owner
-            KLOD_MINT // mint
+            KLOD_MINT, // mint
+            TOKEN_2022_PROGRAM_ID // Token-2022 program
           )
         );
       }
 
-      // Add transfer instruction
+      // Add transfer instruction (Token-2022)
       const amountInSmallestUnit = Math.floor(amountNum * Math.pow(10, KLOD_DECIMALS));
       transaction.add(
         createTransferInstruction(
           senderTokenAccount,
           recipientTokenAccount,
           publicKey,
-          amountInSmallestUnit
+          amountInSmallestUnit,
+          [],
+          TOKEN_2022_PROGRAM_ID
         )
       );
 
