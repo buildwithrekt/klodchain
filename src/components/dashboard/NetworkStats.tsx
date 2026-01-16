@@ -3,10 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSimulationStore } from "@/stores/simulation-store";
 import { formatNumber, formatTps, formatSlot } from "@/lib/utils/formatters";
-import { Blocks, Activity, Users, Wallet } from "lucide-react";
+import { Blocks, Activity, Users, Receipt } from "lucide-react";
 
 export function NetworkStats() {
-  const { currentSlot, tps, validators, accounts, transactions } =
+  const { currentSlot, tps, validators, transactions } =
     useSimulationStore();
 
   const stats = [
@@ -26,9 +26,9 @@ export function NetworkStats() {
       icon: Users,
     },
     {
-      title: "Accounts",
-      value: formatNumber(accounts.size),
-      icon: Wallet,
+      title: "Transactions",
+      value: formatNumber(transactions.length),
+      icon: Receipt,
     },
   ];
 
