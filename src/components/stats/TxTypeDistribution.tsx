@@ -12,18 +12,22 @@ interface TxTypeDistributionProps {
 
 const COLORS = [
   "hsl(180, 77%, 60%)",  // cyan - transfer
+  "hsl(200, 77%, 55%)",  // blue - token_transfer
   "hsl(142, 76%, 46%)",  // green - create_account
   "hsl(38, 92%, 50%)",   // orange - program_call
   "hsl(262, 83%, 58%)",  // purple - stake
   "hsl(0, 84%, 60%)",    // red - vote
+  "hsl(320, 70%, 55%)",  // pink - faucet_claim
 ];
 
 const TYPE_LABELS: Record<string, string> = {
   transfer: "Transfer",
+  token_transfer: "Token Transfer",
   create_account: "Create Account",
   program_call: "Program Call",
   stake: "Stake",
   vote: "Vote",
+  faucet_claim: "Faucet Claim",
 };
 
 export function TxTypeDistribution({ data, loading }: TxTypeDistributionProps) {
