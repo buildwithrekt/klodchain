@@ -24,9 +24,15 @@ export function Header() {
           <TpsCounter />
           <Link
             href="/explorer"
-            className="text-sm animate-pulse text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Explorer
+          </Link>
+          <Link
+            href="/stats"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Stats
           </Link>
           <Link
             href="/roadmap"

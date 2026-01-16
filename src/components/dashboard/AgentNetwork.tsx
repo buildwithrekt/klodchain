@@ -15,8 +15,8 @@ const AGENT_INFO: Record<string, { displayName: string; description: string }> =
   oracle: { displayName: "SAGE", description: "Data Oracle" },
 };
 
-// Fallback agents for when DB is empty
-const FALLBACK_AGENTS: Agent[] = [
+// Fallback agents for when DB is empty (function to get fresh timestamps)
+const getFallbackAgents = (): Agent[] => [
   { id: "1", pubkey: "", name: "VEX", role: "validator", status: "active", uptime: 99.9, last_active: new Date().toISOString(), created_at: "" },
   { id: "2", pubkey: "", name: "ARC", role: "architect", status: "active", uptime: 99.8, last_active: new Date().toISOString(), created_at: "" },
   { id: "3", pubkey: "", name: "SCAN", role: "analyst", status: "active", uptime: 99.9, last_active: new Date().toISOString(), created_at: "" },
@@ -40,18 +40,27 @@ function calculateUptime(lastActive: string): number {
 }
 
 function AgentCard({ agent }: { agent: Agent }) {
-  const [uptime, setUptime] = useState(() => calculateUptime(agent.last_active));
+  // Fallback agents (no pubkey) always show high uptime with small fluctuations
+  const isFallback = !agent.pubkey;
+  const [uptime, setUptime] = useState(() =>
+    isFallback ? 99.5 + Math.random() * 0.4 : calculateUptime(agent.last_active)
+  );
 
   // Recalculate uptime based on last_active, with small fluctuations
   useEffect(() => {
     const interval = setInterval(() => {
-      const baseUptime = calculateUptime(agent.last_active);
-      // Add small random fluctuation for visual effect
-      const delta = (Math.random() - 0.5) * 0.2;
-      setUptime(Math.min(99.99, Math.max(95, baseUptime + delta)));
+      if (isFallback) {
+        // Fallback agents: simulate stable high uptime (99.3 - 99.9)
+        setUptime(99.3 + Math.random() * 0.6);
+      } else {
+        const baseUptime = calculateUptime(agent.last_active);
+        // Add small random fluctuation for visual effect
+        const delta = (Math.random() - 0.5) * 0.2;
+        setUptime(Math.min(99.99, Math.max(95, baseUptime + delta)));
+      }
     }, 3000);
     return () => clearInterval(interval);
-  }, [agent.last_active]);
+  }, [agent.last_active, isFallback]);
 
   // Get display info for this agent role
   const info = AGENT_INFO[agent.role] || { displayName: agent.name, description: agent.role };
@@ -83,7 +92,7 @@ function AgentCard({ agent }: { agent: Agent }) {
 
 export function AgentNetwork() {
   const { agents, loading } = useAgents();
-  const displayAgents = agents.length > 0 ? agents : FALLBACK_AGENTS;
+  const displayAgents = agents.length > 0 ? agents : getFallbackAgents();
 
   return (
     <Card>
