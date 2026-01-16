@@ -6,8 +6,70 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Solana Simulator",
-  description: "Educational Solana blockchain simulator with real-time block production",
+  title: {
+    default: "klodchain - Autonomous Blockchain Simulator",
+    template: "%s | klodchain",
+  },
+  description:
+    "Educational blockchain simulator powered by 6 autonomous KLOD agents. Real-time block production, transaction processing, and consensus visualization.",
+  keywords: [
+    "blockchain",
+    "simulator",
+    "KLOD",
+    "klodchain",
+    "autonomous agents",
+    "educational",
+    "crypto",
+    "web3",
+    "proof of history",
+    "validators",
+  ],
+  authors: [{ name: "buildwithrekt", url: "https://github.com/buildwithrekt" }],
+  creator: "buildwithrekt",
+  publisher: "klodchain",
+  metadataBase: new URL("https://klodchain.vercel.app"),
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://klodchain.vercel.app",
+    siteName: "klodchain",
+    title: "klodchain - Autonomous Blockchain Simulator",
+    description:
+      "Educational blockchain simulator powered by 6 autonomous KLOD agents. Real-time block production and consensus visualization.",
+    images: [
+      {
+        url: "/assets/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "klodchain - Autonomous Blockchain Simulator",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "klodchain - Autonomous Blockchain Simulator",
+    description:
+      "Educational blockchain simulator powered by 6 autonomous KLOD agents.",
+    images: ["/assets/og-image.png"],
+    creator: "@buildwithrekt",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  icons: {
+    icon: "/favicons/favicon.ico",
+    shortcut: "/favicons/favicon-96x96.png",
+    apple: "/favicons/apple-touch-icon.png",
+  },
+  manifest: "/favicons/site.webmanifest",
 };
 
 export default function RootLayout({
