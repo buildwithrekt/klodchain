@@ -27,25 +27,38 @@ import {
 import { useBlocks } from "@/hooks/useBlocks";
 import { useTransactions } from "@/hooks/useTransactions";
 import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/utils/formatters";
-import { Search, Blocks, Receipt, ArrowRight } from "lucide-react";
+import { Search, Blocks, Receipt, ArrowRight, Loader2 } from "lucide-react";
 
 export default function ExplorerPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const router = useRouter();
   const { blocks, loading: blocksLoading } = useBlocks(20);
   const { transactions, loading: txLoading } = useTransactions(20);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    // Detect if it's a slot number, tx signature, or pubkey
-    if (/^\d+$/.test(searchQuery)) {
-      router.push(`/explorer/block/${searchQuery}`);
-    } else if (searchQuery.length > 60) {
-      router.push(`/explorer/tx/${searchQuery}`);
-    } else {
-      router.push(`/explorer/account/${searchQuery}`);
+    setSearching(true);
+    setSearchError(null);
+
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      const data = await response.json();
+
+      if (data.type === "not_found") {
+        setSearchError("No results found for this query");
+      } else if (data.url) {
+        router.push(data.url);
+      } else {
+        setSearchError("Search failed");
+      }
+    } catch {
+      setSearchError("Search failed");
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -73,14 +86,27 @@ export default function ExplorerPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by slot number, transaction signature, or account address..."
+                  placeholder="Search by slot, blockhash, signature, pubkey, program..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSearchError(null);
+                  }}
                   className="pl-10"
+                  disabled={searching}
                 />
               </div>
-              <Button type="submit">Search</Button>
+              <Button type="submit" disabled={searching}>
+                {searching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Search"
+                )}
+              </Button>
             </form>
+            {searchError && (
+              <p className="text-sm text-destructive mt-2">{searchError}</p>
+            )}
           </CardContent>
         </Card>
 
