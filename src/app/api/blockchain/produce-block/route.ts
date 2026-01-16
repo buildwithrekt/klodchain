@@ -48,8 +48,8 @@ async function generateRandomTransactions(count: number): Promise<void> {
   for (let i = 0; i < count; i++) {
     const amount = Math.floor(Math.random() * 10000000000) + 1000000; // 0.001 to 10 KLOD
 
-    // 10% chance of immediate failure
-    const isFailed = Math.random() < 0.1;
+    // 5% chance of immediate failure
+    const isFailed = Math.random() < 0.05;
 
     transactions.push({
       signature: generateSignature(),
