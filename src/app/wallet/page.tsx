@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import {
   PublicKey,
   Transaction,
@@ -40,6 +40,7 @@ interface RecentTransfer {
 export default function WalletPage() {
   const { publicKey, connected, sendTransaction } = useWallet();
   const { connection } = useConnection();
+  const { setVisible } = useWalletModal();
   const [balance, setBalance] = useState<TokenBalance | null>(null);
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
@@ -233,7 +234,10 @@ export default function WalletPage() {
             <p className="text-sm text-muted-foreground mb-6">
               Connect your Solana wallet to send and receive KLOD tokens
             </p>
-            <WalletMultiButton className="!bg-primary hover:!bg-primary/90" />
+            <Button onClick={() => setVisible(true)} size="lg" className="gap-2">
+              <Wallet className="h-5 w-5" />
+              Connect Wallet
+            </Button>
           </CardContent>
         </Card>
       ) : (

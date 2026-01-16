@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { TpsCounter } from "@/components/dashboard/TpsCounter";
+import { WalletButton } from "@/components/wallet/WalletButton";
 
 export function Header() {
   return (
@@ -52,6 +53,7 @@ export function Header() {
           >
             Roadmap
           </Link>
+          <WalletButton />
         </div>
       </div>
     </header>
