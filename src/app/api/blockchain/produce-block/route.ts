@@ -291,11 +291,31 @@ export async function POST() {
       }
     }
 
+    const totalTxGenerated = results.reduce((sum, r) => sum + r.txGenerated, 0);
+    const totalTxConfirmed = results.reduce((sum, r) => sum + r.txConfirmed, 0);
+
+    // Calculate and store real TPS (transactions per second over the cron period)
+    const cronDurationSeconds = (BLOCKS_PER_CRON - 1) * (DELAY_BETWEEN_BLOCKS_MS / 1000);
+    const realTps = totalTxConfirmed / Math.max(cronDurationSeconds, 1);
+
+    // Get latest slot for the stats record
+    const latestSlot = results.length > 0 ? results[results.length - 1].block?.slot : 0;
+
+    // Store TPS in network_stats
+    await supabase.from("network_stats").insert({
+      slot: latestSlot,
+      tps: realTps,
+      active_validators: validators.length,
+      total_transactions: totalTxConfirmed,
+      total_accounts: 0,
+    });
+
     return NextResponse.json({
       success: true,
       blocksProduced: results.length,
-      totalTxGenerated: results.reduce((sum, r) => sum + r.txGenerated, 0),
-      totalTxConfirmed: results.reduce((sum, r) => sum + r.txConfirmed, 0),
+      totalTxGenerated,
+      totalTxConfirmed,
+      tps: realTps,
     });
   } catch (error) {
     console.error("Block production error:", error);

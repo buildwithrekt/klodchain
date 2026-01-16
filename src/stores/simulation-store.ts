@@ -56,7 +56,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     const supabase = createClient();
 
     // Fetch initial data from Supabase
-    const [blocksRes, txRes, validatorsRes] = await Promise.all([
+    const [blocksRes, txRes, validatorsRes, statsRes] = await Promise.all([
       supabase
         .from("blocks")
         .select("*")
@@ -71,11 +71,18 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         .from("validators")
         .select("*")
         .order("stake", { ascending: false }),
+      supabase
+        .from("network_stats")
+        .select("tps")
+        .order("recorded_at", { ascending: false })
+        .limit(1)
+        .single(),
     ]);
 
     const blocks = blocksRes.data || [];
     const transactions = txRes.data || [];
     const validators = validatorsRes.data || [];
+    const initialTps = statsRes.data?.tps || 0;
     const currentSlot = blocks.length > 0 ? blocks[0].slot + 1 : 0;
 
     // Subscribe to real-time updates
@@ -145,11 +152,27 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       )
       .subscribe();
 
+    // Subscribe to network_stats for TPS updates
+    const statsChannel = supabase
+      .channel("stats-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "network_stats" },
+        (payload) => {
+          const newTps = (payload.new as { tps: number }).tps;
+          if (newTps !== undefined) {
+            set({ tps: newTps });
+          }
+        }
+      )
+      .subscribe();
+
     // Cleanup function
     const cleanup = () => {
       supabase.removeChannel(blocksChannel);
       supabase.removeChannel(txChannel);
       supabase.removeChannel(validatorsChannel);
+      supabase.removeChannel(statsChannel);
     };
 
     set({
@@ -160,6 +183,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       recentTransactions: transactions.slice(0, 100),
       validators,
       currentSlot,
+      tps: initialTps,
       _cleanup: cleanup,
     });
 
@@ -178,18 +202,11 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
     set({ isRunning: true });
 
-    // TPS calculation based on recent transactions (no client-side block production)
-    // Blocks are produced by Vercel cron only
+    // TPS is now updated via Supabase realtime from network_stats
+    // This interval is just for keeping isRunning state
     const intervalId = setInterval(() => {
-      const state = get();
-      // Calculate TPS from recent confirmed transactions in the last 10 seconds
-      const tenSecondsAgo = new Date(Date.now() - 10000).toISOString();
-      const recentConfirmed = state.recentTransactions.filter(
-        (tx) => tx.status === "confirmed" && tx.confirmed_at && tx.confirmed_at > tenSecondsAgo
-      ).length;
-      const newTps = recentConfirmed / 10;
-      set({ tps: (state.tps * 0.7 + newTps * 0.3) }); // Smoothed average
-    }, 2000);
+      // Keep alive - TPS comes from server via realtime subscription
+    }, 10000);
 
     set({ _intervalId: intervalId });
   },
