@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -80,7 +82,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
-        {children}
+        <div className="min-h-screen bg-background flex flex-col">
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
         <Toaster />
       </body>
     </html>

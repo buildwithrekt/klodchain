@@ -6,11 +6,18 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { createClient } from "@/lib/supabase/client";
-import { formatSol, formatTimestamp } from "@/lib/utils/formatters";
+import { formatSol, formatTimestamp, shortenHash } from "@/lib/utils/formatters";
 import type { Transaction } from "@/types";
-import { ArrowLeft, ArrowRight, Receipt, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowRight, Receipt, CheckCircle, Clock, XCircle } from "lucide-react";
 
 export default function TransactionDetailPage() {
   const params = useParams();
@@ -38,41 +45,21 @@ export default function TransactionDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-background/95 backdrop-blur">
-          <div className="max-w-7xl px-4 mx-auto flex h-14 items-center">
-            <Link href="/explorer" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Explorer</span>
-            </Link>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-64 w-full" />
-        </main>
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   if (!tx) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-background/95 backdrop-blur">
-          <div className="max-w-7xl px-4 mx-auto flex h-14 items-center">
-            <Link href="/explorer" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Explorer</span>
-            </Link>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Transaction not found
-            </CardContent>
-          </Card>
-        </main>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Transaction not found
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -92,19 +79,25 @@ export default function TransactionDetailPage() {
       : "text-red-500";
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="max-w-7xl px-4 mx-auto flex h-14 items-center">
-          <Link href="/explorer" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Explorer</span>
-          </Link>
-        </div>
-      </header>
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/explorer">Explorer</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>TX {shortenHash(signature, 8)}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Transaction Header */}
+      {/* Transaction Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
             <Receipt className="h-6 w-6 text-primary" />
@@ -238,7 +231,6 @@ export default function TransactionDetailPage() {
             </CardContent>
           </Card>
         )}
-      </main>
     </div>
   );
 }

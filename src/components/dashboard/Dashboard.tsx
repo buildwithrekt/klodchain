@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { AgentNetwork } from "./AgentNetwork";
 import { NetworkStats } from "./NetworkStats";
 import { EpochProgress } from "./EpochProgress";
@@ -21,31 +19,24 @@ export function Dashboard() {
   }, [initialize, isInitialized]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+    <div className="container py-6 space-y-6 mx-auto max-w-7xl px-4">
+      {/* Agent Network Status */}
+      <AgentNetwork />
 
-      {/* Main Content */}
-      <main className="container py-6 space-y-6 mx-auto max-w-7xl px-4 flex-1">
-        {/* Agent Network Status */}
-        <AgentNetwork />
+      {/* Network Stats */}
+      <NetworkStats />
 
-        {/* Network Stats */}
-        <NetworkStats />
+      {/* Epoch Progress */}
+      <EpochProgress />
 
-        {/* Epoch Progress */}
-        <EpochProgress />
+      {/* Main Grid */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <BlockFeed />
+        <TransactionFeed />
+      </div>
 
-        {/* Main Grid */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <BlockFeed />
-          <TransactionFeed />
-        </div>
-
-        {/* Validators */}
-        <ValidatorLeaderboard />
-      </main>
-
-      <Footer />
+      {/* Validators */}
+      <ValidatorLeaderboard />
     </div>
   );
 }

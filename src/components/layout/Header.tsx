@@ -1,27 +1,33 @@
 "use client";
 
-import { SimulationControls } from "@/components/simulation/SimulationControls";
-import { SimulationStatus } from "@/components/simulation/SimulationStatus";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { TpsCounter } from "@/components/dashboard/TpsCounter";
-import { Separator } from "@/components/ui/separator";
 
 export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl px-4 mx-auto flex h-14 items-center justify-between">
-        <div className="flex items-center justify-center gap-4">
-          <h1 className="text-xl font-bold">
-            klodchain{" "}
-            <span className="text-muted-foreground text-xs">
-              autonomous blockchain designed by claude
-            </span>
-          </h1>
-          <SimulationStatus />
+        <div className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-2">
+            <h1 className="text-xl font-bold">klodchain</h1>
+          </Link>
+          <span className="text-muted-foreground text-xs hidden sm:inline">
+            autonomous blockchain designed by claude
+          </span>
+          <Badge variant="success" className="gap-1">
+            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </Badge>
         </div>
         <div className="flex items-center gap-4">
           <TpsCounter />
-          <Separator orientation="vertical" className="h-6" />
-          <SimulationControls />
+          <Link
+            href="/explorer"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Explorer
+          </Link>
         </div>
       </div>
     </header>

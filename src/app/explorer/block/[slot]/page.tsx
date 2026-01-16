@@ -13,11 +13,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/utils/formatters";
 import type { Block, Transaction } from "@/types";
-import { ArrowLeft, ArrowRight, Blocks, Receipt, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Blocks, Receipt, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function BlockDetailPage() {
@@ -60,74 +68,61 @@ export default function BlockDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-background/95 backdrop-blur">
-          <div className="max-w-7xl px-4 mx-auto flex h-14 items-center">
-            <Link href="/explorer" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Explorer</span>
-            </Link>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-64 w-full" />
-        </main>
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   if (!block) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-background/95 backdrop-blur">
-          <div className="max-w-7xl px-4 mx-auto flex h-14 items-center">
-            <Link href="/explorer" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Explorer</span>
-            </Link>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Block #{slot.toLocaleString()} not found
-            </CardContent>
-          </Card>
-        </main>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Block #{slot.toLocaleString()} not found
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="max-w-7xl px-4 mx-auto flex h-14 items-center justify-between">
-          <Link href="/explorer" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Explorer</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            {block.parent_slot !== null && (
-              <Link href={`/explorer/block/${block.parent_slot}`}>
-                <Button variant="outline" size="sm">
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-              </Link>
-            )}
-            <Link href={`/explorer/block/${slot + 1}`}>
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {/* Breadcrumb & Navigation */}
+      <div className="flex items-center justify-between">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/explorer">Explorer</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Block #{slot.toLocaleString()}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <div className="flex items-center gap-2">
+          {block.parent_slot !== null && (
+            <Link href={`/explorer/block/${block.parent_slot}`}>
               <Button variant="outline" size="sm">
-                Next
-                <ChevronRight className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
+                Previous
               </Button>
             </Link>
-          </div>
+          )}
+          <Link href={`/explorer/block/${slot + 1}`}>
+            <Button variant="outline" size="sm">
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      </div>
         {/* Block Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -251,7 +246,6 @@ export default function BlockDetailPage() {
             )}
           </CardContent>
         </Card>
-      </main>
     </div>
   );
 }

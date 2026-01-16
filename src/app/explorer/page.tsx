@@ -16,10 +16,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { useBlocks } from "@/hooks/useBlocks";
 import { useTransactions } from "@/hooks/useTransactions";
 import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/utils/formatters";
-import { Search, Blocks, Receipt, ArrowRight, ArrowLeft } from "lucide-react";
+import { Search, Blocks, Receipt, ArrowRight } from "lucide-react";
 
 export default function ExplorerPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,19 +50,21 @@ export default function ExplorerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="max-w-7xl px-4 mx-auto flex h-14 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            <h1 className="text-xl font-bold">klodchain Explorer</h1>
-          </Link>
-        </div>
-      </header>
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Explorer</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Search */}
+      {/* Search */}
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={handleSearch} className="flex gap-2">
@@ -229,7 +239,6 @@ export default function ExplorerPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
     </div>
   );
 }
