@@ -101,23 +101,25 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
 ALTER PUBLICATION supabase_realtime ADD TABLE accounts;
 ALTER PUBLICATION supabase_realtime ADD TABLE network_stats;
 
--- Seed initial agents
+-- Seed initial agents with unique names
+-- VEX: Block Producer | ARC: Network Design | SCAN: Chain Monitor
+-- FLUX: TX Processor | SYNC: Consensus Engine | SAGE: Data Oracle
 INSERT INTO agents (pubkey, name, role, status, uptime) VALUES
-  ('K1odVa1idator111111111111111111111111111111', 'KLOD Validator', 'validator', 'active', 99.9),
-  ('K1odArchitect222222222222222222222222222222', 'KLOD Architect', 'architect', 'active', 99.8),
-  ('K1odAna1yst3333333333333333333333333333333', 'KLOD Analyst', 'analyst', 'active', 99.9),
-  ('K1odReviewer44444444444444444444444444444', 'KLOD Reviewer', 'reviewer', 'active', 99.7),
-  ('K1odConsensus5555555555555555555555555555', 'KLOD Consensus', 'consensus', 'active', 99.9),
-  ('K1od0rac1e666666666666666666666666666666', 'KLOD Oracle', 'oracle', 'active', 99.8);
+  ('K1odVa1idator111111111111111111111111111111', 'VEX', 'validator', 'active', 99.9),
+  ('K1odArchitect222222222222222222222222222222', 'ARC', 'architect', 'active', 99.8),
+  ('K1odAna1yst3333333333333333333333333333333', 'SCAN', 'analyst', 'active', 99.9),
+  ('K1odReviewer44444444444444444444444444444', 'FLUX', 'reviewer', 'active', 99.7),
+  ('K1odConsensus5555555555555555555555555555', 'SYNC', 'consensus', 'active', 99.9),
+  ('K1od0rac1e666666666666666666666666666666', 'SAGE', 'oracle', 'active', 99.8);
 
--- Seed initial validators (same as agents for now)
+-- Seed initial validators (same as agents)
 INSERT INTO validators (pubkey, name, stake, is_active) VALUES
-  ('K1odVa1idator111111111111111111111111111111', 'KLOD Validator', 500000000000, true),
-  ('K1odArchitect222222222222222222222222222222', 'KLOD Architect', 450000000000, true),
-  ('K1odAna1yst3333333333333333333333333333333', 'KLOD Analyst', 400000000000, true),
-  ('K1odReviewer44444444444444444444444444444', 'KLOD Reviewer', 350000000000, true),
-  ('K1odConsensus5555555555555555555555555555', 'KLOD Consensus', 480000000000, true),
-  ('K1od0rac1e666666666666666666666666666666', 'KLOD Oracle', 420000000000, true);
+  ('K1odVa1idator111111111111111111111111111111', 'VEX', 500000000000, true),
+  ('K1odArchitect222222222222222222222222222222', 'ARC', 450000000000, true),
+  ('K1odAna1yst3333333333333333333333333333333', 'SCAN', 400000000000, true),
+  ('K1odReviewer44444444444444444444444444444', 'FLUX', 350000000000, true),
+  ('K1odConsensus5555555555555555555555555555', 'SYNC', 480000000000, true),
+  ('K1od0rac1e666666666666666666666666666666', 'SAGE', 420000000000, true);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)

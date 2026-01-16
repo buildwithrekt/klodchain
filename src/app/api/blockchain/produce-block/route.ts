@@ -246,11 +246,10 @@ async function produceOneBlock(validators: { id: string; pubkey: string; blocks_
     .update({ blocks_produced: leader.blocks_produced + 1 })
     .eq("id", leader.id);
 
-  // Update agent last_active
+  // Update ALL agents' last_active (they all participate in consensus)
   await supabase
     .from("agents")
-    .update({ last_active: new Date().toISOString() })
-    .eq("pubkey", leader.pubkey);
+    .update({ last_active: new Date().toISOString() });
 
   return { block: newBlock, txGenerated: randomTxCount, txConfirmed: txCount };
 }
