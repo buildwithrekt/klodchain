@@ -28,7 +28,13 @@ function TransactionCard({ tx }: { tx: Transaction }) {
               {shortenHash(tx.signature, 8)}
             </span>
             <Badge
-              variant={tx.status === "confirmed" ? "success" : "secondary"}
+              variant={
+                tx.status === "confirmed"
+                  ? "success"
+                  : tx.status === "failed"
+                  ? "destructive"
+                  : "secondary"
+              }
               className={`text-xs ${tx.status === "pending" ? "animate-pulse" : ""}`}
             >
               {tx.status}

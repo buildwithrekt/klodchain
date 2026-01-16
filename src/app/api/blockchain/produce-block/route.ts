@@ -33,20 +33,35 @@ function generatePubkey(): string {
   return result;
 }
 
+const FAIL_REASONS = [
+  "Insufficient funds",
+  "Invalid signature",
+  "Account not found",
+  "Blockhash expired",
+  "Program error",
+];
+
 // Generate random transactions for activity
 async function generateRandomTransactions(count: number): Promise<void> {
   const transactions = [];
 
   for (let i = 0; i < count; i++) {
     const amount = Math.floor(Math.random() * 10000000000) + 1000000; // 0.001 to 10 KLOD
+
+    // 10% chance of immediate failure
+    const isFailed = Math.random() < 0.1;
+
     transactions.push({
       signature: generateSignature(),
       fee: 5000,
-      status: "pending",
+      status: isFailed ? "failed" : "pending",
       transaction_type: "transfer",
       from_pubkey: generatePubkey(),
       to_pubkey: generatePubkey(),
       amount,
+      instruction_data: isFailed
+        ? { error: FAIL_REASONS[Math.floor(Math.random() * FAIL_REASONS.length)] }
+        : null,
     });
   }
 
@@ -57,8 +72,8 @@ async function generateRandomTransactions(count: number): Promise<void> {
 
 export async function POST() {
   try {
-    // Generate some random transactions for activity (1-5 per block)
-    const randomTxCount = Math.floor(Math.random() * 5) + 1;
+    // Generate some random transactions for activity (2-8 per block)
+    const randomTxCount = Math.floor(Math.random() * 7) + 2;
     await generateRandomTransactions(randomTxCount);
 
     // Get the latest block
