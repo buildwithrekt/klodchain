@@ -202,23 +202,9 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
     set({ isRunning: true });
 
-    // Calculate TPS client-side as fallback when server TPS is 0
-    const intervalId = setInterval(() => {
-      const state = get();
-      // Only calculate if current TPS is very low (fallback)
-      if (state.tps < 0.01) {
-        const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
-        const recentConfirmed = state.recentTransactions.filter(
-          (tx) => tx.status === "confirmed" && tx.confirmed_at && tx.confirmed_at > thirtySecondsAgo
-        ).length;
-        const calculatedTps = recentConfirmed / 30;
-        if (calculatedTps > 0) {
-          set({ tps: calculatedTps });
-        }
-      }
-    }, 5000);
-
-    set({ _intervalId: intervalId });
+    // TPS comes from server via realtime subscription to network_stats
+    // No client-side fallback - skeleton shown when TPS is 0
+    set({ _intervalId: null });
   },
 
   stop: () => {

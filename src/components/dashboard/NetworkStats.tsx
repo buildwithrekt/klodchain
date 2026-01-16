@@ -49,21 +49,25 @@ export function NetworkStats() {
       title: "Current Slot",
       value: formatSlot(currentSlot),
       icon: Blocks,
+      loading: false,
     },
     {
       title: "TPS",
       value: formatTps(tps),
       icon: Activity,
+      loading: tps < 0.01,
     },
     {
       title: "Validators",
       value: validators.length.toString(),
       icon: Users,
+      loading: false,
     },
     {
       title: "Transactions",
       value: formatNumber(totalTxCount),
       icon: Receipt,
+      loading: false,
     },
   ];
 
@@ -94,7 +98,11 @@ export function NetworkStats() {
             <stat.icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stat.value}</div>
+            {stat.loading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{stat.value}</div>
+            )}
           </CardContent>
         </Card>
       ))}
