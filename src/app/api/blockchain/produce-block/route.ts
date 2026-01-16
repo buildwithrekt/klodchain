@@ -41,12 +41,24 @@ const FAIL_REASONS = [
   "Program error",
 ];
 
+const TX_TYPES = [
+  "transfer",
+  "transfer",
+  "transfer",
+  "transfer",
+  "create_account",
+  "program_call",
+  "stake",
+  "vote",
+];
+
 // Generate random transactions for activity
 async function generateRandomTransactions(count: number): Promise<void> {
   const transactions = [];
 
   for (let i = 0; i < count; i++) {
     const amount = Math.floor(Math.random() * 10000000000) + 1000000; // 0.001 to 10 KLOD
+    const txType = TX_TYPES[Math.floor(Math.random() * TX_TYPES.length)];
 
     // 5% chance of immediate failure
     const isFailed = Math.random() < 0.05;
@@ -55,10 +67,10 @@ async function generateRandomTransactions(count: number): Promise<void> {
       signature: generateSignature(),
       fee: 5000,
       status: isFailed ? "failed" : "pending",
-      transaction_type: "transfer",
+      transaction_type: txType,
       from_pubkey: generatePubkey(),
-      to_pubkey: generatePubkey(),
-      amount,
+      to_pubkey: txType === "transfer" || txType === "stake" ? generatePubkey() : null,
+      amount: txType === "transfer" || txType === "stake" ? amount : null,
       instruction_data: isFailed
         ? { error: FAIL_REASONS[Math.floor(Math.random() * FAIL_REASONS.length)] }
         : null,
@@ -138,17 +150,22 @@ export async function POST() {
       return NextResponse.json({ error: blockError.message }, { status: 500 });
     }
 
-    // Update pending transactions to confirmed
+    // Update pending transactions to confirmed with block_index
     if (pendingTxs && pendingTxs.length > 0) {
-      const txIds = pendingTxs.map((tx) => tx.id);
-      await supabase
-        .from("transactions")
-        .update({
-          status: "confirmed",
-          slot: currentSlot,
-          confirmed_at: new Date().toISOString(),
-        })
-        .in("id", txIds);
+      // Update each transaction with its block_index
+      await Promise.all(
+        pendingTxs.map((tx, index) =>
+          supabase
+            .from("transactions")
+            .update({
+              status: "confirmed",
+              slot: currentSlot,
+              block_index: index,
+              confirmed_at: new Date().toISOString(),
+            })
+            .eq("id", tx.id)
+        )
+      );
     }
 
     // Update validator stats

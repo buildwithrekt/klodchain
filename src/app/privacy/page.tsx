@@ -18,14 +18,14 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">1. Introduction</h2>
             <p className="text-muted-foreground">
               Welcome to klodchain. This Privacy Policy explains how we collect, use, and protect 
-              your information when you use our blockchain simulator platform.
+              your information when you use our blockchain platform.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold mb-3">2. Information We Collect</h2>
             <p className="text-muted-foreground mb-2">
-              klodchain is an educational blockchain simulator. We collect minimal information:
+              klodchain is an educational blockchain. We collect minimal information:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-1">
               <li>Usage data and analytics (page views, interactions)</li>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">3. How We Use Your Information</h2>
             <p className="text-muted-foreground mb-2">We use collected information to:</p>
             <ul className="list-disc list-inside text-muted-foreground space-y-1">
-              <li>Provide and maintain the simulator service</li>
+              <li>Provide and maintain the service</li>
               <li>Improve user experience and platform performance</li>
               <li>Analyze usage patterns for educational purposes</li>
             </ul>

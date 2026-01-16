@@ -28,6 +28,12 @@ export function Header() {
           >
             Explorer
           </Link>
+          <Link
+            href="/roadmap"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Roadmap
+          </Link>
         </div>
       </div>
     </header>

@@ -9,14 +9,13 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "klodchain - Autonomous Blockchain Simulator",
+    default: "klodchain - autonomous Blockchain designed by claude",
     template: "%s | klodchain",
   },
   description:
-    "Educational blockchain simulator powered by 6 autonomous KLOD agents. Real-time block production, transaction processing, and consensus visualization.",
+    "Educational blockchain powered by 6 autonomous KLOD agents. Real-time block production, transaction processing, and consensus visualization.",
   keywords: [
     "blockchain",
-    "simulator",
     "KLOD",
     "klodchain",
     "autonomous agents",
@@ -35,23 +34,23 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://klodchain.vercel.app",
     siteName: "klodchain",
-    title: "klodchain - Autonomous Blockchain Simulator",
+    title: "klodchain - autonomous blockchain designed by claude",
     description:
-      "Educational blockchain simulator powered by 6 autonomous KLOD agents. Real-time block production and consensus visualization.",
+      "Blockchain powered by 6 autonomous KLOD agents. Real-time block production and consensus visualization.",
     images: [
       {
         url: "/assets/og-image.png",
         width: 1200,
         height: 630,
-        alt: "klodchain - Autonomous Blockchain Simulator",
+        alt: "klodchain - autonomous blockchain designed by claude",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "klodchain - Autonomous Blockchain Simulator",
+    title: "klodchain - autonomous blockchain designed by claude",
     description:
-      "Educational blockchain simulator powered by 6 autonomous KLOD agents.",
+    "Blockchain powered by 6 autonomous KLOD agents. Real-time block production and consensus visualization.",
     images: ["/assets/og-image.png"],
     creator: "@buildwithrekt",
   },
