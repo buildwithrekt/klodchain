@@ -206,12 +206,6 @@ export default function RoadmapPage() {
           ))}
         </div>
       </div>
-
-      <div className="mt-12 text-center">
-        <p className="text-muted-foreground">
-          Want to contribute? Check out our GitHub
-        </p>
-      </div>
     </div>
   );
 }

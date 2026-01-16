@@ -77,13 +77,6 @@ export default function PrivacyPage() {
               visible as part of the educational experience.
             </p>
           </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-3">8. Contact</h2>
-            <p className="text-muted-foreground">
-              For questions about this Privacy Policy, please visit our GitHub repository.
-            </p>
-          </section>
         </CardContent>
       </Card>
     </div>

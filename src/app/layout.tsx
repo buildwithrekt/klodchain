@@ -25,7 +25,6 @@ export const metadata: Metadata = {
     "proof of history",
     "validators",
   ],
-  authors: [{ name: "buildwithrekt", url: "https://github.com/buildwithrekt" }],
   creator: "buildwithrekt",
   publisher: "klodchain",
   metadataBase: new URL("https://klodchain.vercel.app"),

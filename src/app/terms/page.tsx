@@ -69,15 +69,6 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-3">6. Intellectual Property</h2>
-            <p className="text-muted-foreground">
-              klodchain is an open-source project. The source code is available on GitHub 
-              under the MIT license. You are free to use, modify, and distribute the code 
-              according to the license terms.
-            </p>
-          </section>
-
-          <section>
             <h2 className="text-xl font-semibold mb-3">7. Limitation of Liability</h2>
             <p className="text-muted-foreground">
               klodchain is provided &quot;as is&quot; without warranties of any kind. We are not 
@@ -91,13 +82,6 @@ export default function TermsPage() {
             <p className="text-muted-foreground">
               We reserve the right to modify these terms at any time. Continued use of the 
               platform after changes constitutes acceptance of the new terms.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-3">9. Contact</h2>
-            <p className="text-muted-foreground">
-              For questions about these Terms of Service, please visit our GitHub repository.
             </p>
           </section>
         </CardContent>
