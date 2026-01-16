@@ -70,10 +70,10 @@ function AgentCard({ agent }: { agent: Agent }) {
       <div className="relative">
         <div
           className={`h-2.5 w-2.5 rounded-full ${
-            uptime >= 99 ? "bg-green-500" : uptime >= 97 ? "bg-yellow-500" : "bg-red-500"
+            uptime >= 50 ? "bg-green-500" : "bg-red-500"
           }`}
         />
-        {uptime >= 99 && (
+        {uptime >= 50 && (
           <div className="absolute inset-0 h-2.5 w-2.5 animate-ping rounded-full bg-green-500 opacity-75" />
         )}
       </div>
