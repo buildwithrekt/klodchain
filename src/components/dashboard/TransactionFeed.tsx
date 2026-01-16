@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSimulationStore } from "@/stores/simulation-store";
 import {
   shortenHash,
@@ -12,6 +13,24 @@ import {
 } from "@/lib/utils/formatters";
 import type { Transaction } from "@/types";
 import { ArrowRight, Receipt } from "lucide-react";
+
+function TransactionCardSkeleton() {
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-3">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-lg" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </div>
+      <div className="text-right space-y-2">
+        <Skeleton className="h-4 w-20 ml-auto" />
+        <Skeleton className="h-3 w-16 ml-auto" />
+      </div>
+    </div>
+  );
+}
 
 function TransactionCard({ tx }: { tx: Transaction }) {
   return (
@@ -67,7 +86,7 @@ function TransactionCard({ tx }: { tx: Transaction }) {
 }
 
 export function TransactionFeed() {
-  const { recentTransactions } = useSimulationStore();
+  const { recentTransactions, isInitialized } = useSimulationStore();
 
   return (
     <Card className="h-full">
@@ -80,7 +99,9 @@ export function TransactionFeed() {
       <CardContent>
         <ScrollArea className="h-[400px] pr-4">
           <div className="space-y-2">
-            {recentTransactions.length === 0 ? (
+            {!isInitialized ? (
+              [...Array(6)].map((_, i) => <TransactionCardSkeleton key={i} />)
+            ) : recentTransactions.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 No transactions yet.
               </p>

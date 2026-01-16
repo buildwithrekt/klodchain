@@ -5,10 +5,29 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSimulationStore } from "@/stores/simulation-store";
 import { shortenHash, shortenPubkey, formatTimestamp } from "@/lib/utils/formatters";
 import type { Block } from "@/types";
 import { Blocks } from "lucide-react";
+
+function BlockCardSkeleton() {
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-3">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-lg" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-32" />
+        </div>
+      </div>
+      <div className="text-right space-y-2">
+        <Skeleton className="h-3 w-20 ml-auto" />
+        <Skeleton className="h-3 w-16 ml-auto" />
+      </div>
+    </div>
+  );
+}
 
 function BlockCard({ block }: { block: Block }) {
   return (
@@ -46,7 +65,7 @@ function BlockCard({ block }: { block: Block }) {
 }
 
 export function BlockFeed() {
-  const { recentBlocks } = useSimulationStore();
+  const { recentBlocks, isInitialized } = useSimulationStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to top when new blocks arrive
@@ -67,7 +86,9 @@ export function BlockFeed() {
       <CardContent>
         <ScrollArea className="h-[400px] pr-4" ref={scrollRef}>
           <div className="space-y-2">
-            {recentBlocks.length === 0 ? (
+            {!isInitialized ? (
+              [...Array(6)].map((_, i) => <BlockCardSkeleton key={i} />)
+            ) : recentBlocks.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 No blocks yet. Start the simulation to see blocks.
               </p>

@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSimulationStore } from "@/stores/simulation-store";
 import { createClient } from "@/lib/supabase/client";
 import { formatNumber, formatTps, formatSlot } from "@/lib/utils/formatters";
 import { Blocks, Activity, Users, Receipt } from "lucide-react";
 
 export function NetworkStats() {
-  const { currentSlot, tps, validators } = useSimulationStore();
+  const { currentSlot, tps, validators, isInitialized } = useSimulationStore();
   const [totalTxCount, setTotalTxCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
@@ -20,6 +22,7 @@ export function NetworkStats() {
         .from("transactions")
         .select("*", { count: "exact", head: true });
       setTotalTxCount(count || 0);
+      setLoading(false);
     };
 
     fetchCount();
@@ -63,6 +66,24 @@ export function NetworkStats() {
       icon: Receipt,
     },
   ];
+
+  if (loading || !isInitialized) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
