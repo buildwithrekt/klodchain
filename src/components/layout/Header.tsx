@@ -35,6 +35,12 @@ export function Header() {
             Stats
           </Link>
           <Link
+            href="/wallet"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Wallet
+          </Link>
+          <Link
             href="/chat"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >

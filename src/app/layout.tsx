@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { WalletProvider } from "@/providers/WalletProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -80,12 +81,14 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
-        <div className="min-h-screen bg-background flex flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        <Toaster />
+        <WalletProvider>
+          <div className="min-h-screen bg-background flex flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <Toaster />
+        </WalletProvider>
       </body>
     </html>
   );
