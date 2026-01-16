@@ -258,9 +258,9 @@ async function produceOneBlock(validators: { id: string; pubkey: string; blocks_
 // Helper to delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Cron job produces 12 blocks per minute (~1 block every 5 seconds)
-const BLOCKS_PER_CRON = 12;
-const DELAY_BETWEEN_BLOCKS_MS = 4500; // 4.5s delay, total ~54s for 12 blocks
+// Cron job produces 15 blocks per minute (~1 block every 4 seconds)
+const BLOCKS_PER_CRON = 15;
+const DELAY_BETWEEN_BLOCKS_MS = 3500; // 3.5s delay, total ~52s for 15 blocks
 
 export async function POST() {
   try {
