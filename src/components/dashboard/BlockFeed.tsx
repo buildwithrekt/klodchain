@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,9 @@ import { Blocks } from "lucide-react";
 
 function BlockCard({ block }: { block: Block }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors">
+    <Link
+      href={`/explorer/block/${block.slot}`}
+      className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
           <Blocks className="h-5 w-5 text-primary" />
@@ -38,7 +41,7 @@ function BlockCard({ block }: { block: Block }) {
           {formatTimestamp(block.timestamp)}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

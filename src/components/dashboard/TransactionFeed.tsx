@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -8,14 +9,15 @@ import {
   shortenHash,
   shortenPubkey,
   formatSol,
-  formatTimestamp,
 } from "@/lib/utils/formatters";
 import type { Transaction } from "@/types";
 import { ArrowRight, Receipt } from "lucide-react";
 
 function TransactionCard({ tx }: { tx: Transaction }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors">
+    <Link
+      href={`/explorer/tx/${tx.signature}`}
+      className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
           <Receipt className="h-5 w-5 text-primary" />
@@ -51,7 +53,7 @@ function TransactionCard({ tx }: { tx: Transaction }) {
           Slot #{tx.slot?.toLocaleString() ?? "pending"}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
