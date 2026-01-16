@@ -183,7 +183,8 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       block: newBlock,
-      transactionsProcessed: txCount,
+      transactionsGenerated: randomTxCount,
+      transactionsConfirmed: txCount,
     });
   } catch (error) {
     console.error("Block production error:", error);

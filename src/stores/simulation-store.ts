@@ -189,9 +189,9 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
         if (response.ok) {
           const data = await response.json();
-          // TPS calculation
+          // TPS calculation based on generated transactions
           const state = get();
-          const newTps = data.transactionsProcessed / (interval / 1000);
+          const newTps = data.transactionsGenerated / (interval / 1000);
           set({ tps: (state.tps + newTps) / 2 }); // Smoothed average
         }
       } catch (error) {
