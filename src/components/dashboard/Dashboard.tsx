@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AgentNetwork } from "./AgentNetwork";
+import { AgentFeed } from "./AgentFeed";
 import { NetworkStats } from "./NetworkStats";
 import { EpochProgress } from "./EpochProgress";
 import { BlockFeed } from "./BlockFeed";
@@ -25,6 +26,9 @@ export function Dashboard() {
 
       {/* Network Stats */}
       <NetworkStats />
+
+      {/* Agent Thoughts */}
+      <AgentFeed />
 
       {/* Epoch Progress */}
       <EpochProgress />

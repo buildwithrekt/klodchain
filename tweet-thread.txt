@@ -1,0 +1,79 @@
+Building klodchain — a real-time blockchain simulator for studying distributed consensus.
+
+Phase 1 is live. 🧵
+
+1/ ARCHITECTURE
+
+6 autonomous agents coordinate block production:
+- Validator: block validation
+- Architect: network topology
+- Analyst: transaction analysis
+- Consensus: finality rules
+- Reviewer: verification
+- Oracle: external data feeds
+
+Each agent runs independently. State is observable in real-time.
+
+2/ WHAT'S IMPLEMENTED
+
+- Block production: configurable interval (default 2s, adjustable 0.5x-10x)
+- Proof of History: SHA256 sequential hash chain, 64 ticks per slot
+- Leader schedule: stake-weighted round-robin rotation
+- Transaction types: transfer, stake, vote, create_account, program_call
+- Fee model: 5,000-50,000 lamports per tx
+- Failure rate: 5% for realism
+- Epoch structure: 1,432 slots per epoch (~48 min at default speed)
+
+3/ DATA LAYER
+
+- PostgreSQL with real-time subscriptions (Supabase)
+- WebSocket streaming for blocks, transactions, validators
+- Indexed queries on slot, status, pubkey
+- No polling. Event-driven updates only.
+
+4/ EXPLORER
+
+- Search by: slot number, blockhash, tx signature, pubkey, program name
+- Block detail: parent hash, leader, PoH hash, tx list
+- Transaction detail: status, fee, instruction data, confirmation time
+- Pagination and filtering on all tables
+
+5/ METRICS (LIVE)
+
+- Current slot counter
+- TPS (smoothed average)
+- Active validators count
+- Total transactions processed
+- Epoch progress with time estimate
+
+6/ STACK
+
+- Next.js 14 (App Router)
+- TypeScript (strict mode)
+- Supabase (Postgres + Realtime)
+- Zustand (state management)
+- shadcn/ui (components)
+
+Zero blockchain dependencies. Runs entirely in browser + edge.
+
+7/ ROADMAP
+
+Phase 2: Stake delegation, governance proposals, slashing conditions
+Phase 3: Historical analytics, public REST API, webhook events
+Phase 4: AMM simulation, multi-cluster support, deterministic block replay
+
+8/ PURPOSE
+
+Blockchains are distributed state machines with complex consensus rules.
+
+Klodchain exists to make these systems observable:
+- Watch PoH hashes chain in real-time
+- See leader rotation based on stake
+- Track transaction lifecycle from pending to confirmed
+- Measure throughput under different conditions
+
+A laboratory for distributed systems research.
+
+---
+
+Link: [coming soon]
