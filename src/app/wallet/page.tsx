@@ -38,7 +38,7 @@ interface RecentTransfer {
 }
 
 export default function WalletPage() {
-  const { publicKey, connected, sendTransaction } = useWallet();
+  const { publicKey, connected, signTransaction } = useWallet();
   const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [balance, setBalance] = useState<TokenBalance | null>(null);
@@ -89,7 +89,7 @@ export default function WalletPage() {
   };
 
   const handleTransfer = async () => {
-    if (!publicKey || !sendTransaction) {
+    if (!publicKey || !signTransaction) {
       toast.error("Please connect your wallet");
       return;
     }
@@ -163,16 +163,28 @@ export default function WalletPage() {
       );
 
       // Get recent blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
-      // Send transaction
-      const signature = await sendTransaction(transaction, connection);
+      // Sign transaction
+      toast.loading("Please sign the transaction...");
+      const signedTx = await signTransaction(transaction);
+
+      // Send raw transaction
+      toast.loading("Sending transaction...");
+      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+      });
 
       // Wait for confirmation
       toast.loading("Confirming transaction...");
-      await connection.confirmTransaction(signature, "confirmed");
+      await connection.confirmTransaction({
+        blockhash,
+        lastValidBlockHeight,
+        signature,
+      }, "confirmed");
 
       // Record in klodchain
       await fetch("/api/tokens/transfer", {
