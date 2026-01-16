@@ -17,8 +17,11 @@ interface WalletProviderProps {
 }
 
 export const WalletProvider: FC<WalletProviderProps> = ({ children }) => {
-  // Use devnet for simulation purposes
-  const endpoint = useMemo(() => clusterApiUrl("devnet"), []);
+  // Use mainnet for real KLOD tokens
+  const endpoint = useMemo(
+    () => process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl("mainnet-beta"),
+    []
+  );
 
   const wallets = useMemo(
     () => [

@@ -1,14 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useState, useEffect, useCallback } from "react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import {
+  PublicKey,
+  Transaction,
+} from "@solana/web3.js";
+import {
+  createTransferInstruction,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  getAccount,
+} from "@solana/spl-token";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wallet, Send, Loader2, ArrowRight, Coins } from "lucide-react";
 import { toast } from "sonner";
+
+const KLOD_MINT = new PublicKey("8V5ZKPSMixYnBg4t3RtSU9a1daHAh38Pyhea2R3Xpump");
+const KLOD_DECIMALS = 6;
 
 interface TokenBalance {
   balance: number;
@@ -25,7 +38,8 @@ interface RecentTransfer {
 }
 
 export default function WalletPage() {
-  const { publicKey, connected, signMessage } = useWallet();
+  const { publicKey, connected, sendTransaction } = useWallet();
+  const { connection } = useConnection();
   const [balance, setBalance] = useState<TokenBalance | null>(null);
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
@@ -74,7 +88,7 @@ export default function WalletPage() {
   };
 
   const handleTransfer = async () => {
-    if (!publicKey || !signMessage) {
+    if (!publicKey || !sendTransaction) {
       toast.error("Please connect your wallet");
       return;
     }
@@ -95,44 +109,88 @@ export default function WalletPage() {
       return;
     }
 
+    // Validate recipient address
+    let recipientPubkey: PublicKey;
+    try {
+      recipientPubkey = new PublicKey(recipient);
+    } catch {
+      toast.error("Invalid recipient address");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Create message to sign
-      const timestamp = Date.now();
-      const message = `klodchain Transfer\nFrom: ${publicKey.toString()}\nTo: ${recipient}\nAmount: ${amountNum} KLOD\nTimestamp: ${timestamp}`;
+      // Get sender's token account
+      const senderTokenAccount = await getAssociatedTokenAddress(
+        KLOD_MINT,
+        publicKey
+      );
 
-      // Sign the message
-      const encodedMessage = new TextEncoder().encode(message);
-      const signature = await signMessage(encodedMessage);
+      // Get recipient's token account
+      const recipientTokenAccount = await getAssociatedTokenAddress(
+        KLOD_MINT,
+        recipientPubkey
+      );
 
-      // Convert signature to base64
-      const signatureBase64 = Buffer.from(signature).toString("base64");
+      // Build transaction
+      const transaction = new Transaction();
 
-      // Submit transfer
-      const res = await fetch("/api/tokens/transfer", {
+      // Check if recipient token account exists, if not create it
+      try {
+        await getAccount(connection, recipientTokenAccount);
+      } catch {
+        // Account doesn't exist, add instruction to create it
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            publicKey, // payer
+            recipientTokenAccount, // associated token account
+            recipientPubkey, // owner
+            KLOD_MINT // mint
+          )
+        );
+      }
+
+      // Add transfer instruction
+      const amountInSmallestUnit = Math.floor(amountNum * Math.pow(10, KLOD_DECIMALS));
+      transaction.add(
+        createTransferInstruction(
+          senderTokenAccount,
+          recipientTokenAccount,
+          publicKey,
+          amountInSmallestUnit
+        )
+      );
+
+      // Get recent blockhash
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
+
+      // Send transaction
+      const signature = await sendTransaction(transaction, connection);
+
+      // Wait for confirmation
+      toast.loading("Confirming transaction...");
+      await connection.confirmTransaction(signature, "confirmed");
+
+      // Record in klodchain
+      await fetch("/api/tokens/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           from: publicKey.toString(),
           to: recipient,
           amount: amountNum,
-          signature: signatureBase64,
-          message,
-          timestamp,
+          signature: signature,
+          solanaSignature: true,
         }),
       });
 
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success(`Sent ${amountNum} KLOD to ${recipient.slice(0, 4)}...${recipient.slice(-4)}`);
-        setRecipient("");
-        setAmount("");
-        fetchBalance();
-        fetchRecentTransfers();
-      } else {
-        toast.error(data.error || "Transfer failed");
-      }
+      toast.success(`Sent ${amountNum} KLOD to ${recipient.slice(0, 4)}...${recipient.slice(-4)}`);
+      setRecipient("");
+      setAmount("");
+      fetchBalance();
+      fetchRecentTransfers();
     } catch (error: unknown) {
       console.error("Transfer error:", error);
       if (error instanceof Error && error.message.includes("User rejected")) {
@@ -313,10 +371,10 @@ export default function WalletPage() {
           {/* Info */}
           <div className="text-center space-y-1">
             <p className="text-xs text-muted-foreground">
-              Balance fetched from Solana mainnet
+              Real SPL token transfers on Solana mainnet
             </p>
             <p className="text-xs text-muted-foreground">
-              Transfers are recorded on klodchain (simulated)
+              Transactions are also recorded on klodchain
             </p>
           </div>
         </div>
