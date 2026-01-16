@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -27,39 +26,81 @@ import {
 import { useBlocks } from "@/hooks/useBlocks";
 import { useTransactions } from "@/hooks/useTransactions";
 import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/utils/formatters";
-import { Search, Blocks, Receipt, ArrowRight, Loader2 } from "lucide-react";
+import { Search, Blocks, Receipt, ArrowRight, Loader2, User, Code, FileCheck } from "lucide-react";
+
+interface SearchResult {
+  type: "block" | "transaction" | "account" | "validator" | "program";
+  url: string;
+  label: string;
+  sublabel?: string;
+}
+
+const typeIcons = {
+  block: Blocks,
+  transaction: Receipt,
+  account: User,
+  validator: FileCheck,
+  program: Code,
+};
+
+const typeColors = {
+  block: "bg-blue-500/10 text-blue-500",
+  transaction: "bg-green-500/10 text-green-500",
+  account: "bg-purple-500/10 text-purple-500",
+  validator: "bg-orange-500/10 text-orange-500",
+  program: "bg-pink-500/10 text-pink-500",
+};
 
 export default function ExplorerPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { blocks, loading: blocksLoading } = useBlocks(20);
   const { transactions, loading: txLoading } = useTransactions(20);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    setSearching(true);
-    setSearchError(null);
-
-    try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      const data = await response.json();
-
-      if (data.type === "not_found") {
-        setSearchError("No results found for this query");
-      } else if (data.url) {
-        router.push(data.url);
-      } else {
-        setSearchError("Search failed");
-      }
-    } catch {
-      setSearchError("Search failed");
-    } finally {
-      setSearching(false);
+  // Debounced search
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      setResults([]);
+      setShowResults(false);
+      return;
     }
+
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        const data = await response.json();
+        setResults(data.results || []);
+        setShowResults(true);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Close results on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleResultClick = (url: string) => {
+    setShowResults(false);
+    setSearchQuery("");
+    router.push(url);
   };
 
   return (
@@ -80,35 +121,66 @@ export default function ExplorerPage() {
       </Breadcrumb>
 
       {/* Search */}
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <div className="relative flex-1">
+        <div ref={searchRef} className="relative">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by slot, blockhash, signature, pubkey, program..."
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setSearchError(null);
-                  }}
-                  className="pl-10"
-                  disabled={searching}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => results.length > 0 && setShowResults(true)}
+                  className="pl-10 pr-10"
                 />
-              </div>
-              <Button type="submit" disabled={searching}>
-                {searching ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Search"
+                {searching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                 )}
-              </Button>
-            </form>
-            {searchError && (
-              <p className="text-sm text-destructive mt-2">{searchError}</p>
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Search Results Dropdown */}
+          {showResults && (
+            <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-[400px] overflow-auto shadow-lg">
+              <CardContent className="p-2">
+                {results.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No results found
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {results.map((result, index) => {
+                      const Icon = typeIcons[result.type];
+                      return (
+                        <button
+                          key={`${result.url}-${index}`}
+                          onClick={() => handleResultClick(result.url)}
+                          className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
+                        >
+                          <div className={`p-2 rounded-lg ${typeColors[result.type]}`}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-mono text-sm truncate">{result.label}</p>
+                            {result.sublabel && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {result.sublabel}
+                              </p>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="capitalize text-xs shrink-0">
+                            {result.type}
+                          </Badge>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="blocks">
