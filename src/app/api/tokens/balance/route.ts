@@ -1,30 +1,9 @@
 import { NextResponse } from "next/server";
-import { Connection, PublicKey } from "@solana/web3.js";
 
 const KLOD_MINT = "8V5ZKPSMixYnBg4t3RtSU9a1daHAh38Pyhea2R3Xpump";
-const KLOD_DECIMALS = 6; // pump.fun tokens use 6 decimals
+const KLOD_DECIMALS = 6;
 
-// Use Solana mainnet RPC
-const connection = new Connection(
-  process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
-  "confirmed"
-);
-
-// SPL Token Program ID
-const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-
-// Get Associated Token Address
-function getAssociatedTokenAddress(mint: PublicKey, owner: PublicKey): PublicKey {
-  const [address] = PublicKey.findProgramAddressSync(
-    [
-      owner.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      mint.toBuffer(),
-    ],
-    new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL") // Associated Token Program
-  );
-  return address;
-}
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -37,22 +16,31 @@ export async function GET(request: Request) {
     );
   }
 
+  const rpcUrl = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+
   try {
-    const walletPubkey = new PublicKey(wallet);
-    const mintPubkey = new PublicKey(KLOD_MINT);
+    // Get all token accounts for this wallet
+    const response = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getTokenAccountsByOwner",
+        params: [
+          wallet,
+          { mint: KLOD_MINT },
+          { encoding: "jsonParsed" }
+        ]
+      })
+    });
 
-    // Get the associated token account address
-    const tokenAccount = getAssociatedTokenAddress(mintPubkey, walletPubkey);
+    const data = await response.json();
 
-    // Fetch the token account balance
     let balance = 0;
-    try {
-      const accountInfo = await connection.getTokenAccountBalance(tokenAccount);
-      balance = Number(accountInfo.value.uiAmount) || 0;
-    } catch (err) {
-      // Token account doesn't exist = 0 balance
-      console.log("No token account found for wallet:", wallet);
-      balance = 0;
+    if (data.result?.value?.length > 0) {
+      const tokenAccount = data.result.value[0];
+      balance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmount || 0;
     }
 
     return NextResponse.json({
