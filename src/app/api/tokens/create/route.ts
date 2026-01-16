@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     // Create token
     const { data: token, error: tokenError } = await supabaseAdmin
-      .from("tokens")
+      .from("memecoins")
       .insert({
         address: tokenAddress,
         name,
@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
       program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       instruction_data: {
         type: "token_create",
-        token_address: tokenAddress,
+        memecoin_address: tokenAddress,
         token_name: name,
         token_symbol: symbol.toUpperCase(),
         total_supply: 1000000000,

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
 
     let query = supabase
-      .from("tokens")
+      .from("memecoins")
       .select("*", { count: "exact" });
 
     // Search by name or symbol

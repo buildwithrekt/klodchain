@@ -82,7 +82,7 @@ export async function POST(
 
     // Get token
     const { data: token, error: tokenError } = await supabaseAdmin
-      .from("tokens")
+      .from("memecoins")
       .select("*")
       .eq("address", address)
       .single();
@@ -96,9 +96,9 @@ export async function POST(
 
     // Get user's token holding
     const { data: holding, error: holdingError } = await supabaseAdmin
-      .from("token_holdings")
+      .from("memecoin_holdings")
       .select("*")
-      .eq("token_address", address)
+      .eq("memecoin_address", address)
       .eq("wallet_pubkey", walletPubkey)
       .single();
 
@@ -134,7 +134,7 @@ export async function POST(
     const newHoldingAmount = holding.amount - tokenAmountBase;
     if (newHoldingAmount > 0) {
       await supabaseAdmin
-        .from("token_holdings")
+        .from("memecoin_holdings")
         .update({
           amount: newHoldingAmount,
           updated_at: new Date().toISOString(),
@@ -143,7 +143,7 @@ export async function POST(
     } else {
       // Delete holding if zero
       await supabaseAdmin
-        .from("token_holdings")
+        .from("memecoin_holdings")
         .delete()
         .eq("id", holding.id);
     }
@@ -164,7 +164,7 @@ export async function POST(
     const newMarketCap = (newCirculating / 1_000_000) * newPrice;
 
     await supabaseAdmin
-      .from("tokens")
+      .from("memecoins")
       .update({
         circulating_supply: newCirculating,
         price: newPrice,
@@ -175,8 +175,8 @@ export async function POST(
 
     // Create trade record
     const signature = generateSignature();
-    await supabaseAdmin.from("token_trades").insert({
-      token_address: address,
+    await supabaseAdmin.from("memecoin_trades").insert({
+      memecoin_address: address,
       trader_pubkey: walletPubkey,
       trade_type: "sell",
       klod_amount: Math.floor(klodAmount * 1_000_000), // Store in base units
@@ -205,7 +205,7 @@ export async function POST(
       program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       instruction_data: {
         type: "token_sell",
-        token_address: address,
+        memecoin_address: address,
         token_symbol: token.symbol,
         tokens_sold: tokenAmount,
         klod_received: klodAmount,

@@ -20,7 +20,7 @@ export async function GET(
 
     // Get token details
     const { data: token, error: tokenError } = await supabase
-      .from("tokens")
+      .from("memecoins")
       .select("*")
       .eq("address", address)
       .single();
@@ -34,25 +34,25 @@ export async function GET(
 
     // Get holder count
     const { count: holderCount } = await supabase
-      .from("token_holdings")
+      .from("memecoin_holdings")
       .select("*", { count: "exact", head: true })
-      .eq("token_address", address)
+      .eq("memecoin_address", address)
       .gt("amount", 0);
 
     // Get recent trades
     const { data: recentTrades } = await supabase
-      .from("token_trades")
+      .from("memecoin_trades")
       .select("*")
-      .eq("token_address", address)
+      .eq("memecoin_address", address)
       .order("created_at", { ascending: false })
       .limit(20);
 
     // Calculate 24h volume
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: dayTrades } = await supabase
-      .from("token_trades")
+      .from("memecoin_trades")
       .select("klod_amount")
-      .eq("token_address", address)
+      .eq("memecoin_address", address)
       .gte("created_at", oneDayAgo);
 
     const volume24h = (dayTrades || []).reduce(

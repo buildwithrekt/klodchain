@@ -88,7 +88,7 @@ export async function POST(
 
     // Get token
     const { data: token, error: tokenError } = await supabaseAdmin
-      .from("tokens")
+      .from("memecoins")
       .select("*")
       .eq("address", address)
       .single();
@@ -142,23 +142,23 @@ export async function POST(
 
     // Update or create token holding
     const { data: existingHolding } = await supabaseAdmin
-      .from("token_holdings")
+      .from("memecoin_holdings")
       .select("*")
-      .eq("token_address", address)
+      .eq("memecoin_address", address)
       .eq("wallet_pubkey", walletPubkey)
       .single();
 
     if (existingHolding) {
       await supabaseAdmin
-        .from("token_holdings")
+        .from("memecoin_holdings")
         .update({
           amount: existingHolding.amount + tokenAmount,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingHolding.id);
     } else {
-      await supabaseAdmin.from("token_holdings").insert({
-        token_address: address,
+      await supabaseAdmin.from("memecoin_holdings").insert({
+        memecoin_address: address,
         wallet_pubkey: walletPubkey,
         amount: tokenAmount,
       });
@@ -170,7 +170,7 @@ export async function POST(
     const newMarketCap = (newCirculating / 1_000_000) * newPrice;
 
     await supabaseAdmin
-      .from("tokens")
+      .from("memecoins")
       .update({
         circulating_supply: newCirculating,
         price: newPrice,
@@ -181,8 +181,8 @@ export async function POST(
 
     // Create trade record
     const signature = generateSignature();
-    await supabaseAdmin.from("token_trades").insert({
-      token_address: address,
+    await supabaseAdmin.from("memecoin_trades").insert({
+      memecoin_address: address,
       trader_pubkey: walletPubkey,
       trade_type: "buy",
       klod_amount: klodAmount * 1_000_000, // Store in base units
@@ -211,7 +211,7 @@ export async function POST(
       program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       instruction_data: {
         type: "token_buy",
-        token_address: address,
+        memecoin_address: address,
         token_symbol: token.symbol,
         klod_spent: klodAmount,
         tokens_received: tokenAmount / 1_000_000,

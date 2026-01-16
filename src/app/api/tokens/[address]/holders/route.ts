@@ -24,7 +24,7 @@ export async function GET(
 
     // Get token total supply for percentage calculation
     const { data: token } = await supabase
-      .from("tokens")
+      .from("memecoins")
       .select("total_supply, circulating_supply")
       .eq("address", address)
       .single();
@@ -38,9 +38,9 @@ export async function GET(
 
     // Get holders sorted by amount
     const { data: holders, error, count } = await supabase
-      .from("token_holdings")
+      .from("memecoin_holdings")
       .select("*", { count: "exact" })
-      .eq("token_address", address)
+      .eq("memecoin_address", address)
       .gt("amount", 0)
       .order("amount", { ascending: false })
       .range(offset, offset + limit - 1);

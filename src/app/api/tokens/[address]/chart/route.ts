@@ -43,9 +43,9 @@ export async function GET(
 
     // Get trades for the period
     const { data: trades, error } = await supabase
-      .from("token_trades")
+      .from("memecoin_trades")
       .select("price_per_token, created_at, klod_amount, trade_type")
-      .eq("token_address", address)
+      .eq("memecoin_address", address)
       .gte("created_at", fromDate.toISOString())
       .order("created_at", { ascending: true });
 
@@ -92,7 +92,7 @@ export async function GET(
     // Get current token price for starting point if no trades
     if (chartData.length === 0) {
       const { data: token } = await supabase
-        .from("tokens")
+        .from("memecoins")
         .select("price, created_at")
         .eq("address", address)
         .single();

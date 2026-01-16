@@ -265,9 +265,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Search tokens by address, name, or symbol
+    // Search memecoins by address, name, or symbol
     const { data: tokens } = await supabase
-      .from("tokens")
+      .from("memecoins")
       .select("address, name, symbol, price, market_cap")
       .or(`address.ilike.%${query}%,name.ilike.%${query}%,symbol.ilike.%${query}%`)
       .limit(5);
