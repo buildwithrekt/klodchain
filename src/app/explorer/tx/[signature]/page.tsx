@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,7 +18,20 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { formatSol, formatTimestamp, shortenHash } from "@/lib/utils/formatters";
 import type { Transaction } from "@/types";
-import { ArrowRight, Receipt, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowRight, Receipt, CheckCircle, Clock, XCircle, ExternalLink, TrendingDown, TrendingUp } from "lucide-react";
+
+// Helper to format KLOD token amount (6 decimals)
+function formatKlodAmount(amount: number | null, instructionData: Record<string, unknown> | null): string {
+  // For token transfers, use the human-readable amount from instruction_data
+  if (instructionData?.amount !== undefined) {
+    return Number(instructionData.amount).toLocaleString();
+  }
+  // Fallback: divide by 10^6 for token transfers
+  if (amount !== null) {
+    return (amount / 1_000_000).toLocaleString();
+  }
+  return "0";
+}
 
 export default function TransactionDetailPage() {
   const params = useParams();
@@ -175,11 +189,11 @@ export default function TransactionDetailPage() {
                   <p className="font-mono">{formatSol(tx.fee, 6)} KLOD</p>
                 </div>
 
-                {tx.amount !== null && (
+                {(tx.amount !== null || tx.instruction_data?.amount !== undefined) && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Amount</p>
                     <p className="font-mono text-lg font-semibold">
-                      {formatSol(tx.amount, 4)} KLOD
+                      {formatKlodAmount(tx.amount, tx.instruction_data as Record<string, unknown> | null)} KLOD
                     </p>
                   </div>
                 )}
@@ -200,34 +214,115 @@ export default function TransactionDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Transfer Details */}
+        {/* Transfer Details with Tabs */}
         {tx.transaction_type === "transfer" && (
           <Card>
             <CardHeader>
               <CardTitle>Transfer Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="flex-1 p-4 rounded-lg border bg-muted/50">
-                  <p className="text-sm text-muted-foreground mb-1">From</p>
-                  <p className="font-mono text-sm break-all">{tx.from_pubkey}</p>
-                </div>
-                <ArrowRight className="h-6 w-6 text-muted-foreground shrink-0" />
-                <div className="flex-1 p-4 rounded-lg border bg-muted/50">
-                  <p className="text-sm text-muted-foreground mb-1">To</p>
-                  <p className="font-mono text-sm break-all">{tx.to_pubkey || "-"}</p>
-                </div>
-              </div>
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="balance">Balance Changes</TabsTrigger>
+                </TabsList>
 
-              {tx.amount !== null && (
-                <div className="mt-4 p-4 rounded-lg bg-primary/10 text-center">
-                  <p className="text-sm text-muted-foreground mb-1">Amount Transferred</p>
-                  <p className="text-2xl font-bold">{formatSol(tx.amount, 4)} KLOD</p>
-                </div>
-              )}
+                <TabsContent value="overview" className="space-y-4 mt-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 p-4 rounded-lg border bg-muted/50">
+                      <p className="text-sm text-muted-foreground mb-1">From</p>
+                      <p className="font-mono text-sm break-all">{tx.from_pubkey}</p>
+                    </div>
+                    <ArrowRight className="h-6 w-6 text-muted-foreground shrink-0" />
+                    <div className="flex-1 p-4 rounded-lg border bg-muted/50">
+                      <p className="text-sm text-muted-foreground mb-1">To</p>
+                      <p className="font-mono text-sm break-all">{tx.to_pubkey || "-"}</p>
+                    </div>
+                  </div>
+
+                  {(tx.amount !== null || tx.instruction_data?.amount !== undefined) && (
+                    <div className="p-4 rounded-lg bg-primary/10 text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Amount Transferred</p>
+                      <p className="text-2xl font-bold">{formatKlodAmount(tx.amount, tx.instruction_data as Record<string, unknown> | null)} KLOD</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="balance" className="mt-4">
+                  <div className="space-y-3">
+                    {/* Sender Balance Change */}
+                    <div className="flex items-center justify-between p-4 rounded-lg border">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
+                          <TrendingDown className="h-5 w-5 text-red-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Sender</p>
+                          <p className="font-mono text-sm">{shortenHash(tx.from_pubkey, 8)}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono text-lg font-semibold text-red-500">
+                          -{formatKlodAmount(tx.amount, tx.instruction_data as Record<string, unknown> | null)} KLOD
+                        </p>
+                        <p className="text-xs text-muted-foreground">+ {formatSol(tx.fee, 6)} fee</p>
+                      </div>
+                    </div>
+
+                    {/* Recipient Balance Change */}
+                    {tx.to_pubkey && (
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+                            <TrendingUp className="h-5 w-5 text-green-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Recipient</p>
+                            <p className="font-mono text-sm">{shortenHash(tx.to_pubkey, 8)}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-mono text-lg font-semibold text-green-500">
+                            +{formatKlodAmount(tx.amount, tx.instruction_data as Record<string, unknown> | null)} KLOD
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         )}
+
+        {/* External Links */}
+        <Card>
+          <CardHeader>
+            <CardTitle>View on External Explorers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <a
+                href={`https://solscan.io/tx/${tx.signature}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>View on Solscan</span>
+              </a>
+              <a
+                href={`https://explorer.solana.com/tx/${tx.signature}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Solana Explorer</span>
+              </a>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Raw Data */}
         {tx.instruction_data && (
