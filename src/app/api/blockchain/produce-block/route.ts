@@ -24,8 +24,43 @@ function generateSignature(): string {
   return result;
 }
 
+function generatePubkey(): string {
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  let result = "";
+  for (let i = 0; i < 44; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
+
+// Generate random transactions for activity
+async function generateRandomTransactions(count: number): Promise<void> {
+  const transactions = [];
+
+  for (let i = 0; i < count; i++) {
+    const amount = Math.floor(Math.random() * 10000000000) + 1000000; // 0.001 to 10 KLOD
+    transactions.push({
+      signature: generateSignature(),
+      fee: 5000,
+      status: "pending",
+      transaction_type: "transfer",
+      from_pubkey: generatePubkey(),
+      to_pubkey: generatePubkey(),
+      amount,
+    });
+  }
+
+  if (transactions.length > 0) {
+    await supabase.from("transactions").insert(transactions);
+  }
+}
+
 export async function POST() {
   try {
+    // Generate some random transactions for activity (1-5 per block)
+    const randomTxCount = Math.floor(Math.random() * 5) + 1;
+    await generateRandomTransactions(randomTxCount);
+
     // Get the latest block
     const { data: latestBlock } = await supabase
       .from("blocks")

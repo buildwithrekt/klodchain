@@ -1,13 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import type { Block, Transaction, Validator, Account } from "@/types";
-import {
-  SimulationEngine,
-  getEngine,
-  resetEngine,
-  type SimulationEvent,
-} from "@/lib/simulation/engine";
+import type { Block, Transaction, Validator } from "@/types";
+import { createClient } from "@/lib/supabase/client";
 import { SOLANA_CONSTANTS } from "@/lib/utils/constants";
 
 interface SimulationStore {
@@ -25,7 +20,6 @@ interface SimulationStore {
   transactions: Transaction[];
   recentTransactions: Transaction[];
   validators: Validator[];
-  accounts: Map<string, Account>;
 
   // Actions
   initialize: () => Promise<void>;
@@ -34,11 +28,10 @@ interface SimulationStore {
   reset: () => Promise<void>;
   setSpeed: (speed: number) => void;
   advanceOneSlot: () => Promise<void>;
-  addTransaction: (tx: Transaction) => void;
 
   // Internal
-  _engine: SimulationEngine | null;
-  _unsubscribe: (() => void) | null;
+  _intervalId: NodeJS.Timeout | null;
+  _cleanup: (() => void) | null;
 }
 
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
@@ -55,150 +48,211 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   transactions: [],
   recentTransactions: [],
   validators: [],
-  accounts: new Map(),
 
-  _engine: null,
-  _unsubscribe: null,
+  _intervalId: null,
+  _cleanup: null,
 
   initialize: async () => {
-    const { _engine, _unsubscribe } = get();
+    const supabase = createClient();
 
-    // Clean up existing subscription
-    if (_unsubscribe) {
-      _unsubscribe();
-    }
+    // Fetch initial data from Supabase
+    const [blocksRes, txRes, validatorsRes] = await Promise.all([
+      supabase
+        .from("blocks")
+        .select("*")
+        .order("slot", { ascending: false })
+        .limit(50),
+      supabase
+        .from("transactions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("validators")
+        .select("*")
+        .order("stake", { ascending: false }),
+    ]);
 
-    const engine = _engine || getEngine();
-    await engine.initialize();
+    const blocks = blocksRes.data || [];
+    const transactions = txRes.data || [];
+    const validators = validatorsRes.data || [];
+    const currentSlot = blocks.length > 0 ? blocks[0].slot + 1 : 0;
 
-    const state = engine.getState();
-
-    // Subscribe to events
-    const unsubscribe = engine.on((event: SimulationEvent) => {
-      const currentState = get();
-
-      switch (event.type) {
-        case "block": {
-          const block = event.data as Block;
+    // Subscribe to real-time updates
+    const blocksChannel = supabase
+      .channel("blocks-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "blocks" },
+        (payload) => {
+          const newBlock = payload.new as Block;
+          const state = get();
           set({
-            blocks: [...currentState.blocks, block],
-            recentBlocks: [block, ...currentState.recentBlocks].slice(0, 50),
-            currentSlot: block.slot + 1,
+            blocks: [newBlock, ...state.blocks].slice(0, 100),
+            recentBlocks: [newBlock, ...state.recentBlocks].slice(0, 50),
+            currentSlot: newBlock.slot + 1,
           });
-          break;
         }
-        case "transaction": {
-          const tx = event.data as Transaction;
+      )
+      .subscribe();
+
+    const txChannel = supabase
+      .channel("transactions-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        (payload) => {
+          const state = get();
+          if (payload.eventType === "INSERT") {
+            set({
+              transactions: [payload.new as Transaction, ...state.transactions].slice(0, 200),
+              recentTransactions: [payload.new as Transaction, ...state.recentTransactions].slice(0, 100),
+            });
+          } else if (payload.eventType === "UPDATE") {
+            set({
+              transactions: state.transactions.map((tx) =>
+                tx.id === payload.new.id ? (payload.new as Transaction) : tx
+              ),
+              recentTransactions: state.recentTransactions.map((tx) =>
+                tx.id === payload.new.id ? (payload.new as Transaction) : tx
+              ),
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    const validatorsChannel = supabase
+      .channel("validators-realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "validators" },
+        (payload) => {
+          const state = get();
           set({
-            transactions: [...currentState.transactions, tx],
-            recentTransactions: [tx, ...currentState.recentTransactions].slice(0, 100),
+            validators: state.validators.map((v) =>
+              v.id === payload.new.id ? (payload.new as Validator) : v
+            ),
           });
-          break;
         }
-        case "account": {
-          const account = event.data as Account;
-          const newAccounts = new Map(currentState.accounts);
-          newAccounts.set(account.pubkey, account);
-          set({ accounts: newAccounts });
-          break;
-        }
-        case "epoch": {
-          const epochData = event.data as { epoch_number: number };
-          set({ currentEpoch: epochData.epoch_number });
-          break;
-        }
-        case "stats": {
-          const stats = event.data as { tps: number };
-          set({ tps: stats.tps });
-          break;
-        }
-      }
-    });
+      )
+      .subscribe();
+
+    // Cleanup function
+    const cleanup = () => {
+      supabase.removeChannel(blocksChannel);
+      supabase.removeChannel(txChannel);
+      supabase.removeChannel(validatorsChannel);
+    };
 
     set({
-      _engine: engine,
-      _unsubscribe: unsubscribe,
       isInitialized: true,
-      blocks: state.blocks,
-      recentBlocks: state.blocks.slice(-50).reverse(),
-      validators: state.validators,
-      accounts: state.accounts,
-      currentSlot: state.currentSlot,
-      currentEpoch: state.currentEpoch,
+      blocks,
+      recentBlocks: blocks.slice(0, 50),
+      transactions,
+      recentTransactions: transactions.slice(0, 100),
+      validators,
+      currentSlot,
+      _cleanup: cleanup,
     });
   },
 
   start: async () => {
-    const { _engine, isInitialized } = get();
+    const { isInitialized, speed, _intervalId } = get();
+
+    if (_intervalId) return; // Already running
 
     if (!isInitialized) {
       await get().initialize();
     }
 
-    const engine = get()._engine || getEngine();
-    await engine.start();
     set({ isRunning: true });
+
+    // Produce blocks at interval by calling the API
+    const interval = SOLANA_CONSTANTS.DEFAULT_SLOT_DURATION_MS / speed;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch("/api/blockchain/produce-block", {
+          method: "POST",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // TPS calculation
+          const state = get();
+          const newTps = data.transactionsProcessed / (interval / 1000);
+          set({ tps: (state.tps + newTps) / 2 }); // Smoothed average
+        }
+      } catch (error) {
+        console.error("Failed to produce block:", error);
+      }
+    }, interval);
+
+    set({ _intervalId: intervalId });
   },
 
   stop: () => {
-    const { _engine } = get();
-    if (_engine) {
-      _engine.stop();
+    const { _intervalId } = get();
+    if (_intervalId) {
+      clearInterval(_intervalId);
     }
-    set({ isRunning: false });
+    set({ isRunning: false, _intervalId: null, tps: 0 });
   },
 
   reset: async () => {
-    const { _unsubscribe } = get();
+    const { _intervalId, _cleanup } = get();
 
-    if (_unsubscribe) {
-      _unsubscribe();
+    if (_intervalId) {
+      clearInterval(_intervalId);
     }
-
-    resetEngine();
+    if (_cleanup) {
+      _cleanup();
+    }
 
     set({
       isRunning: false,
       isInitialized: false,
       currentSlot: 0,
       currentEpoch: 0,
+      speed: 1,
       tps: 0,
       blocks: [],
       recentBlocks: [],
       transactions: [],
       recentTransactions: [],
       validators: [],
-      accounts: new Map(),
-      _engine: null,
-      _unsubscribe: null,
+      _intervalId: null,
+      _cleanup: null,
     });
 
     await get().initialize();
   },
 
   setSpeed: (speed: number) => {
-    const { _engine } = get();
-    if (_engine) {
-      _engine.setSpeed(speed);
-    }
+    const { isRunning } = get();
     set({ speed });
+
+    if (isRunning) {
+      // Restart with new speed
+      get().stop();
+      get().start();
+    }
   },
 
   advanceOneSlot: async () => {
-    const { _engine, isInitialized } = get();
+    const { isInitialized } = get();
 
     if (!isInitialized) {
       await get().initialize();
     }
 
-    const engine = get()._engine || getEngine();
-    await engine.advanceOneSlot();
-  },
-
-  addTransaction: (tx: Transaction) => {
-    const { _engine } = get();
-    if (_engine) {
-      _engine.addTransaction(tx);
+    try {
+      await fetch("/api/blockchain/produce-block", {
+        method: "POST",
+      });
+    } catch (error) {
+      console.error("Failed to produce block:", error);
     }
   },
 }));
