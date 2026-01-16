@@ -168,7 +168,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   },
 
   start: async () => {
-    const { isInitialized, speed, _intervalId } = get();
+    const { isInitialized, _intervalId } = get();
 
     if (_intervalId) return; // Already running
 
@@ -178,26 +178,18 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
     set({ isRunning: true });
 
-    // Produce blocks at interval by calling the API
-    const interval = SOLANA_CONSTANTS.DEFAULT_SLOT_DURATION_MS / speed;
-
-    const intervalId = setInterval(async () => {
-      try {
-        const response = await fetch("/api/blockchain/produce-block", {
-          method: "POST",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // TPS calculation based on generated transactions
-          const state = get();
-          const newTps = data.transactionsGenerated / (interval / 1000);
-          set({ tps: (state.tps + newTps) / 2 }); // Smoothed average
-        }
-      } catch (error) {
-        console.error("Failed to produce block:", error);
-      }
-    }, interval);
+    // TPS calculation based on recent transactions (no client-side block production)
+    // Blocks are produced by Vercel cron only
+    const intervalId = setInterval(() => {
+      const state = get();
+      // Calculate TPS from recent confirmed transactions in the last 10 seconds
+      const tenSecondsAgo = new Date(Date.now() - 10000).toISOString();
+      const recentConfirmed = state.recentTransactions.filter(
+        (tx) => tx.status === "confirmed" && tx.confirmed_at && tx.confirmed_at > tenSecondsAgo
+      ).length;
+      const newTps = recentConfirmed / 10;
+      set({ tps: (state.tps * 0.7 + newTps * 0.3) }); // Smoothed average
+    }, 2000);
 
     set({ _intervalId: intervalId });
   },

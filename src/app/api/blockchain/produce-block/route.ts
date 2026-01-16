@@ -166,22 +166,104 @@ async function generateRandomTransactions(count: number): Promise<void> {
   }
 }
 
+// Produce a single block
+async function produceOneBlock(validators: { id: string; pubkey: string; blocks_produced: number }[]) {
+  // Generate some random transactions for activity (1-4 per block)
+  const randomTxCount = Math.floor(Math.random() * 4) + 1;
+  await generateRandomTransactions(randomTxCount);
+
+  // Get the latest block
+  const { data: latestBlock } = await supabase
+    .from("blocks")
+    .select("*")
+    .order("slot", { ascending: false })
+    .limit(1)
+    .single();
+
+  const currentSlot = latestBlock ? latestBlock.slot + 1 : 0;
+
+  // Simple leader selection based on slot
+  const leaderIndex = currentSlot % validators.length;
+  const leader = validators[leaderIndex];
+
+  // Get pending transactions that are old enough to be confirmed
+  const minAge = new Date(Date.now() - 100).toISOString();
+  const { data: pendingTxs } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("status", "pending")
+    .lt("created_at", minAge)
+    .limit(50);
+
+  const txCount = pendingTxs?.length || 0;
+  const txSignatures = pendingTxs?.map((tx) => tx.signature) || [];
+
+  // Generate block hash
+  const pohHash = await sha256(`${currentSlot}:${Date.now()}`);
+  const blockhash = await sha256(
+    `${currentSlot}:${pohHash}:${txSignatures.join(",")}`
+  );
+
+  // Create the block
+  const { data: newBlock, error: blockError } = await supabase
+    .from("blocks")
+    .insert({
+      slot: currentSlot,
+      parent_slot: latestBlock?.slot || null,
+      blockhash,
+      previous_blockhash: latestBlock?.blockhash || null,
+      leader_pubkey: leader.pubkey,
+      transaction_count: txCount,
+      poh_hash: pohHash,
+    })
+    .select()
+    .single();
+
+  if (blockError) {
+    throw new Error(blockError.message);
+  }
+
+  // Update pending transactions to confirmed with block_index
+  if (pendingTxs && pendingTxs.length > 0) {
+    await Promise.all(
+      pendingTxs.map((tx, index) =>
+        supabase
+          .from("transactions")
+          .update({
+            status: "confirmed",
+            slot: currentSlot,
+            block_index: index,
+            confirmed_at: new Date().toISOString(),
+          })
+          .eq("id", tx.id)
+      )
+    );
+  }
+
+  // Update validator stats
+  await supabase
+    .from("validators")
+    .update({ blocks_produced: leader.blocks_produced + 1 })
+    .eq("id", leader.id);
+
+  // Update agent last_active
+  await supabase
+    .from("agents")
+    .update({ last_active: new Date().toISOString() })
+    .eq("pubkey", leader.pubkey);
+
+  return { block: newBlock, txGenerated: randomTxCount, txConfirmed: txCount };
+}
+
+// Helper to delay
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Cron job produces 12 blocks per minute (~1 block every 5 seconds)
+const BLOCKS_PER_CRON = 12;
+const DELAY_BETWEEN_BLOCKS_MS = 4500; // 4.5s delay, total ~54s for 12 blocks
+
 export async function POST() {
   try {
-    // Generate some random transactions for activity (1-6 per block)
-    const randomTxCount = Math.floor(Math.random() * 6) + 1;
-    await generateRandomTransactions(randomTxCount);
-
-    // Get the latest block
-    const { data: latestBlock } = await supabase
-      .from("blocks")
-      .select("*")
-      .order("slot", { ascending: false })
-      .limit(1)
-      .single();
-
-    const currentSlot = latestBlock ? latestBlock.slot + 1 : 0;
-
     // Get validators for leader selection
     const { data: validators } = await supabase
       .from("validators")
@@ -192,83 +274,28 @@ export async function POST() {
       return NextResponse.json({ error: "No active validators" }, { status: 500 });
     }
 
-    // Simple leader selection based on slot
-    const leaderIndex = currentSlot % validators.length;
-    const leader = validators[leaderIndex];
+    const results = [];
 
-    // Get pending transactions that are old enough to be confirmed (at least 200ms)
-    const minAge = new Date(Date.now() - 200).toISOString();
-    const { data: pendingTxs } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("status", "pending")
-      .lt("created_at", minAge)
-      .limit(100);
+    // Produce multiple blocks with delays
+    for (let i = 0; i < BLOCKS_PER_CRON; i++) {
+      try {
+        const result = await produceOneBlock(validators);
+        results.push(result);
 
-    const txCount = pendingTxs?.length || 0;
-    const txSignatures = pendingTxs?.map((tx) => tx.signature) || [];
-
-    // Generate block hash
-    const pohHash = await sha256(`${currentSlot}:${Date.now()}`);
-    const blockhash = await sha256(
-      `${currentSlot}:${pohHash}:${txSignatures.join(",")}`
-    );
-
-    // Create the block
-    const { data: newBlock, error: blockError } = await supabase
-      .from("blocks")
-      .insert({
-        slot: currentSlot,
-        parent_slot: latestBlock?.slot || null,
-        blockhash,
-        previous_blockhash: latestBlock?.blockhash || null,
-        leader_pubkey: leader.pubkey,
-        transaction_count: txCount,
-        poh_hash: pohHash,
-      })
-      .select()
-      .single();
-
-    if (blockError) {
-      console.error("Block creation error:", blockError);
-      return NextResponse.json({ error: blockError.message }, { status: 500 });
+        // Wait before producing next block (except for the last one)
+        if (i < BLOCKS_PER_CRON - 1) {
+          await delay(DELAY_BETWEEN_BLOCKS_MS);
+        }
+      } catch (error) {
+        console.error(`Block ${i} production error:`, error);
+      }
     }
-
-    // Update pending transactions to confirmed with block_index
-    if (pendingTxs && pendingTxs.length > 0) {
-      // Update each transaction with its block_index
-      await Promise.all(
-        pendingTxs.map((tx, index) =>
-          supabase
-            .from("transactions")
-            .update({
-              status: "confirmed",
-              slot: currentSlot,
-              block_index: index,
-              confirmed_at: new Date().toISOString(),
-            })
-            .eq("id", tx.id)
-        )
-      );
-    }
-
-    // Update validator stats
-    await supabase
-      .from("validators")
-      .update({ blocks_produced: leader.blocks_produced + 1 })
-      .eq("id", leader.id);
-
-    // Update agent last_active
-    await supabase
-      .from("agents")
-      .update({ last_active: new Date().toISOString() })
-      .eq("pubkey", leader.pubkey);
 
     return NextResponse.json({
       success: true,
-      block: newBlock,
-      transactionsGenerated: randomTxCount,
-      transactionsConfirmed: txCount,
+      blocksProduced: results.length,
+      totalTxGenerated: results.reduce((sum, r) => sum + r.txGenerated, 0),
+      totalTxConfirmed: results.reduce((sum, r) => sum + r.txConfirmed, 0),
     });
   } catch (error) {
     console.error("Block production error:", error);
