@@ -236,8 +236,13 @@ export default function ExplorerPage() {
                               #{block.slot.toLocaleString()}
                             </Link>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {shortenHash(block.blockhash, 12)}
+                          <TableCell>
+                            <Link
+                              href={`/explorer/block/${block.slot}`}
+                              className="font-mono text-sm text-primary hover:underline"
+                            >
+                              {shortenHash(block.blockhash, 12)}
+                            </Link>
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {shortenPubkey(block.leader_pubkey, 6)}
