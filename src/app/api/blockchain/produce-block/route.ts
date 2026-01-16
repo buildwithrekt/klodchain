@@ -85,8 +85,8 @@ export async function POST() {
     const leaderIndex = currentSlot % validators.length;
     const leader = validators[leaderIndex];
 
-    // Get pending transactions that are old enough to be confirmed (at least 6 seconds / 3 blocks)
-    const minAge = new Date(Date.now() - 6000).toISOString();
+    // Get pending transactions that are old enough to be confirmed (at least 20 seconds / 10 blocks)
+    const minAge = new Date(Date.now() - 20000).toISOString();
     const { data: pendingTxs } = await supabase
       .from("transactions")
       .select("*")

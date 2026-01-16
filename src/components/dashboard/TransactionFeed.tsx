@@ -29,7 +29,7 @@ function TransactionCard({ tx }: { tx: Transaction }) {
             </span>
             <Badge
               variant={tx.status === "confirmed" ? "success" : "secondary"}
-              className="text-xs"
+              className={`text-xs ${tx.status === "pending" ? "animate-pulse" : ""}`}
             >
               {tx.status}
             </Badge>
