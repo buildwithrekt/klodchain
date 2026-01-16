@@ -1,0 +1,51 @@
+"use client";
+
+import { useEffect } from "react";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { AgentNetwork } from "./AgentNetwork";
+import { NetworkStats } from "./NetworkStats";
+import { EpochProgress } from "./EpochProgress";
+import { BlockFeed } from "./BlockFeed";
+import { TransactionFeed } from "./TransactionFeed";
+import { ValidatorLeaderboard } from "./ValidatorLeaderboard";
+import { useSimulationStore } from "@/stores/simulation-store";
+
+export function Dashboard() {
+  const { initialize, isInitialized } = useSimulationStore();
+
+  useEffect(() => {
+    if (!isInitialized) {
+      initialize();
+    }
+  }, [initialize, isInitialized]);
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+
+      {/* Main Content */}
+      <main className="container py-6 space-y-6 mx-auto max-w-7xl px-4 flex-1">
+        {/* Agent Network Status */}
+        <AgentNetwork />
+
+        {/* Network Stats */}
+        <NetworkStats />
+
+        {/* Epoch Progress */}
+        <EpochProgress />
+
+        {/* Main Grid */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <BlockFeed />
+          <TransactionFeed />
+        </div>
+
+        {/* Validators */}
+        <ValidatorLeaderboard />
+      </main>
+
+      <Footer />
+    </div>
+  );
+}

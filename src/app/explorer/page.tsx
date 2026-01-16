@@ -1,0 +1,235 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useBlocks } from "@/hooks/useBlocks";
+import { useTransactions } from "@/hooks/useTransactions";
+import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/utils/formatters";
+import { Search, Blocks, Receipt, ArrowRight, ArrowLeft } from "lucide-react";
+
+export default function ExplorerPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+  const { blocks, loading: blocksLoading } = useBlocks(20);
+  const { transactions, loading: txLoading } = useTransactions(20);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    // Detect if it's a slot number, tx signature, or pubkey
+    if (/^\d+$/.test(searchQuery)) {
+      router.push(`/explorer/block/${searchQuery}`);
+    } else if (searchQuery.length > 60) {
+      router.push(`/explorer/tx/${searchQuery}`);
+    } else {
+      router.push(`/explorer/account/${searchQuery}`);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-background/95 backdrop-blur">
+        <div className="max-w-7xl px-4 mx-auto flex h-14 items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            <h1 className="text-xl font-bold">klodchain Explorer</h1>
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Search */}
+        <Card>
+          <CardContent className="pt-6">
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by slot number, transaction signature, or account address..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button type="submit">Search</Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Tabs */}
+        <Tabs defaultValue="blocks">
+          <TabsList>
+            <TabsTrigger value="blocks" className="gap-2">
+              <Blocks className="h-4 w-4" />
+              Blocks
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-2">
+              <Receipt className="h-4 w-4" />
+              Transactions
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Blocks Tab */}
+          <TabsContent value="blocks">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Blocks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Slot</TableHead>
+                      <TableHead>Block Hash</TableHead>
+                      <TableHead>Leader</TableHead>
+                      <TableHead className="text-right">Transactions</TableHead>
+                      <TableHead className="text-right">Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {blocksLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          Loading blocks...
+                        </TableCell>
+                      </TableRow>
+                    ) : blocks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No blocks yet
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      blocks.map((block) => (
+                        <TableRow key={block.id}>
+                          <TableCell>
+                            <Link
+                              href={`/explorer/block/${block.slot}`}
+                              className="font-mono text-primary hover:underline"
+                            >
+                              #{block.slot.toLocaleString()}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {shortenHash(block.blockhash, 12)}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {shortenPubkey(block.leader_pubkey, 6)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="secondary">{block.transaction_count}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground text-sm">
+                            {formatTimestamp(block.timestamp)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Transactions Tab */}
+          <TabsContent value="transactions">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Signature</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>From / To</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="text-right">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {txLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          Loading transactions...
+                        </TableCell>
+                      </TableRow>
+                    ) : transactions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No transactions yet
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      transactions.map((tx) => (
+                        <TableRow key={tx.id}>
+                          <TableCell>
+                            <Link
+                              href={`/explorer/tx/${tx.signature}`}
+                              className="font-mono text-primary hover:underline text-sm"
+                            >
+                              {shortenHash(tx.signature, 12)}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {tx.transaction_type.replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm font-mono">
+                              <span>{shortenPubkey(tx.from_pubkey, 4)}</span>
+                              {tx.to_pubkey && (
+                                <>
+                                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                  <span>{shortenPubkey(tx.to_pubkey, 4)}</span>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {tx.amount ? `${formatSol(tx.amount, 4)} KLOD` : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge
+                              variant={
+                                tx.status === "confirmed"
+                                  ? "success"
+                                  : tx.status === "pending"
+                                  ? "secondary"
+                                  : "destructive"
+                              }
+                            >
+                              {tx.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
