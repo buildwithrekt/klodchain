@@ -207,7 +207,28 @@ export default function WalletPage() {
         }),
       });
 
-      toast.success(`Sent ${amountNum} KLOD to ${recipient.slice(0, 4)}...${recipient.slice(-4)}`);
+      toast.success(
+        <div className="space-y-1">
+          <p>Sent {amountNum} KLOD to {recipient.slice(0, 4)}...{recipient.slice(-4)}</p>
+          <div className="flex gap-2 text-xs">
+            <a
+              href={`/explorer/tx/${signature}`}
+              className="text-primary hover:underline"
+            >
+              View on klodchain
+            </a>
+            <span>•</span>
+            <a
+              href={`https://solscan.io/tx/${signature}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              View on Solscan
+            </a>
+          </div>
+        </div>
+      );
       setRecipient("");
       setAmount("");
       fetchBalance();
