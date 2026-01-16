@@ -87,9 +87,12 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         (payload) => {
           const newBlock = payload.new as Block;
           const state = get();
+          // Deduplicate by filtering out existing block with same id
+          const filteredBlocks = state.blocks.filter((b) => b.id !== newBlock.id);
+          const filteredRecent = state.recentBlocks.filter((b) => b.id !== newBlock.id);
           set({
-            blocks: [newBlock, ...state.blocks].slice(0, 100),
-            recentBlocks: [newBlock, ...state.recentBlocks].slice(0, 50),
+            blocks: [newBlock, ...filteredBlocks].slice(0, 100),
+            recentBlocks: [newBlock, ...filteredRecent].slice(0, 50),
             currentSlot: newBlock.slot + 1,
           });
         }
@@ -103,10 +106,14 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         { event: "*", schema: "public", table: "transactions" },
         (payload) => {
           const state = get();
+          const newTx = payload.new as Transaction;
           if (payload.eventType === "INSERT") {
+            // Deduplicate by filtering out existing tx with same id
+            const filteredTxs = state.transactions.filter((tx) => tx.id !== newTx.id);
+            const filteredRecent = state.recentTransactions.filter((tx) => tx.id !== newTx.id);
             set({
-              transactions: [payload.new as Transaction, ...state.transactions].slice(0, 200),
-              recentTransactions: [payload.new as Transaction, ...state.recentTransactions].slice(0, 100),
+              transactions: [newTx, ...filteredTxs].slice(0, 200),
+              recentTransactions: [newTx, ...filteredRecent].slice(0, 100),
             });
           } else if (payload.eventType === "UPDATE") {
             set({
@@ -155,6 +162,9 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       currentSlot,
       _cleanup: cleanup,
     });
+
+    // Auto-start the simulation
+    get().start();
   },
 
   start: async () => {
