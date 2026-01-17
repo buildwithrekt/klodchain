@@ -132,6 +132,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Initial pool: 4000 KLOD + 800M tokens (virtual liquidity)
+    // This gives initial price of 4000/800M = 0.000005 KLOD per token
+    const INITIAL_RESERVE_KLOD = 4000;
+    const INITIAL_RESERVE_TOKEN = 800000000000000; // 800M with 6 decimals
+    const INITIAL_PRICE = INITIAL_RESERVE_KLOD / (INITIAL_RESERVE_TOKEN / 1_000_000);
+
     // Create token
     const { data: token, error: tokenError } = await supabaseAdmin
       .from("memecoins")
@@ -147,9 +153,11 @@ export async function POST(req: NextRequest) {
         creator_pubkey: creatorPubkey,
         total_supply: 1000000000000000, // 1B with 6 decimals
         circulating_supply: 0,
-        price: 0.000001,
+        price: INITIAL_PRICE,
         market_cap: 0,
         volume_24h: 0,
+        reserve_klod: INITIAL_RESERVE_KLOD,
+        reserve_token: INITIAL_RESERVE_TOKEN,
       })
       .select()
       .single();

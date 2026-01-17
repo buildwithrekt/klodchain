@@ -15,22 +15,27 @@ function generateSignature(): string {
   return signature;
 }
 
-// Bonding curve: price increases as supply is bought
-const BASE_PRICE = 0.000001;
-const MULTIPLIER = 0.01;
+// AMM constant product formula: x * y = k
+// When selling tokens for KLOD:
+// - Add tokens to reserve_token
+// - Remove KLOD from reserve_klod (maintaining k)
+function calculateSellOutput(
+  tokensIn: number,
+  reserveKlod: number,
+  reserveToken: number
+): { klodOut: number; newReserveKlod: number; newReserveToken: number; pricePerToken: number } {
+  const k = reserveKlod * reserveToken;
+  const newReserveToken = reserveToken + tokensIn;
+  const newReserveKlod = k / newReserveToken;
+  const klodOut = reserveKlod - newReserveKlod;
+  const pricePerToken = klodOut / (tokensIn / 1_000_000); // Price per whole token
 
-function calculatePrice(circulatingSupply: number, totalSupply: number): number {
-  return BASE_PRICE + (circulatingSupply / totalSupply) * MULTIPLIER;
-}
-
-function calculateKlodForTokens(
-  tokenAmount: number,
-  circulatingSupply: number,
-  totalSupply: number
-): { klod: number; avgPrice: number } {
-  const currentPrice = calculatePrice(circulatingSupply, totalSupply);
-  const klod = Math.floor((tokenAmount / 1_000_000) * currentPrice * 1_000_000) / 1_000_000;
-  return { klod, avgPrice: currentPrice };
+  return {
+    klodOut,
+    newReserveKlod,
+    newReserveToken,
+    pricePerToken,
+  };
 }
 
 export async function POST(
@@ -116,14 +121,18 @@ export async function POST(
       );
     }
 
-    // Calculate KLOD to receive
-    const { klod: klodAmount, avgPrice } = calculateKlodForTokens(
+    // Use pool reserves (default to initial values if not set)
+    const reserveKlod = Number(token.reserve_klod) || 4000;
+    const reserveToken = Number(token.reserve_token) || 800000000000000;
+
+    // Calculate KLOD to receive using AMM formula
+    const { klodOut, newReserveKlod, newReserveToken, pricePerToken } = calculateSellOutput(
       tokenAmountBase,
-      token.circulating_supply,
-      token.total_supply
+      reserveKlod,
+      reserveToken
     );
 
-    if (klodAmount <= 0) {
+    if (klodOut <= 0) {
       return NextResponse.json(
         { success: false, error: "Amount too small" },
         { status: 400 }
@@ -152,24 +161,27 @@ export async function POST(
     await supabaseAdmin
       .from("wallets")
       .update({
-        balance: wallet.balance + klodAmount,
+        balance: wallet.balance + klodOut,
         transaction_count: wallet.transaction_count + 1,
-        total_received: wallet.total_received + klodAmount,
+        total_received: wallet.total_received + klodOut,
       })
       .eq("pubkey", walletPubkey);
 
-    // Update token stats
+    // Calculate new price from pool reserves
+    const newPrice = newReserveKlod / (newReserveToken / 1_000_000);
     const newCirculating = token.circulating_supply - tokenAmountBase;
-    const newPrice = calculatePrice(newCirculating, token.total_supply);
     const newMarketCap = (newCirculating / 1_000_000) * newPrice;
 
+    // Update token with new pool reserves and stats
     await supabaseAdmin
       .from("memecoins")
       .update({
+        reserve_klod: newReserveKlod,
+        reserve_token: newReserveToken,
         circulating_supply: newCirculating,
         price: newPrice,
         market_cap: newMarketCap,
-        volume_24h: (token.volume_24h || 0) + klodAmount,
+        volume_24h: (token.volume_24h || 0) + klodOut,
       })
       .eq("address", address);
 
@@ -179,9 +191,9 @@ export async function POST(
       memecoin_address: address,
       trader_pubkey: walletPubkey,
       trade_type: "sell",
-      klod_amount: Math.floor(klodAmount * 1_000_000), // Store in base units
+      klod_amount: Math.floor(klodOut * 1_000_000),
       token_amount: tokenAmountBase,
-      price_per_token: avgPrice,
+      price_per_token: pricePerToken,
       signature,
     });
 
@@ -201,15 +213,15 @@ export async function POST(
       transaction_type: "token_sell",
       from_pubkey: walletPubkey,
       to_pubkey: address,
-      amount: Math.floor(klodAmount * 1_000_000),
+      amount: Math.floor(klodOut * 1_000_000),
       program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       instruction_data: {
         type: "token_sell",
         memecoin_address: address,
         token_symbol: token.symbol,
         tokens_sold: tokenAmount,
-        klod_received: klodAmount,
-        price_per_token: avgPrice,
+        klod_received: klodOut,
+        price_per_token: pricePerToken,
       },
       confirmed_at: new Date().toISOString(),
     });
@@ -219,9 +231,9 @@ export async function POST(
       trade: {
         signature,
         tokensSold: tokenAmount,
-        klodReceived: klodAmount,
-        pricePerToken: avgPrice,
-        newKlodBalance: wallet.balance + klodAmount,
+        klodReceived: klodOut,
+        pricePerToken,
+        newKlodBalance: wallet.balance + klodOut,
       },
     });
   } catch (error) {

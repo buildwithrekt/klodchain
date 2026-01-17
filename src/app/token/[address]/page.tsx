@@ -385,6 +385,30 @@ export default function TokenDetailPage() {
             </Card>
           </div>
 
+          {/* Liquidity Pool */}
+          <Card className="border-primary/30">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold">Liquidity Pool (AMM)</p>
+                <Badge variant="outline">x * y = k</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground">KLOD Reserve</p>
+                  <p className="text-lg font-bold font-mono">
+                    {formatNumber(Number(token.reserve_klod) || 4000)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground">{token.symbol} Reserve</p>
+                  <p className="text-lg font-bold font-mono">
+                    {formatNumber((Number(token.reserve_token) || 800000000000000) / 1_000_000)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Chart */}
           <Card>
             <CardHeader>

@@ -53,6 +53,8 @@ export interface Token {
   price: number;
   market_cap: number;
   volume_24h: number;
+  reserve_klod: number;
+  reserve_token: number;
   created_at: string;
 }
 
