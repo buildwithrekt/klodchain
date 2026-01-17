@@ -25,6 +25,15 @@ export async function GET(
     let fromDate: Date;
     const now = new Date();
     switch (period) {
+      case "1m":
+        fromDate = new Date(now.getTime() - 60 * 1000);
+        break;
+      case "5m":
+        fromDate = new Date(now.getTime() - 5 * 60 * 1000);
+        break;
+      case "15m":
+        fromDate = new Date(now.getTime() - 15 * 60 * 1000);
+        break;
       case "1h":
         fromDate = new Date(now.getTime() - 60 * 60 * 1000);
         break;
@@ -58,7 +67,12 @@ export async function GET(
     }
 
     // Aggregate into time buckets for smoother chart
-    const bucketSize = period === "1h" ? 60000 : period === "24h" ? 3600000 : 86400000;
+    // 1m/5m/15m = 5 sec buckets, 1h = 1 min buckets, 24h = 1 hour buckets, 7d/30d = 1 day buckets
+    const bucketSize =
+      period === "1m" || period === "5m" || period === "15m" ? 5000 :
+      period === "1h" ? 60000 :
+      period === "24h" ? 3600000 :
+      86400000;
     const buckets: Map<number, { price: number; volume: number; count: number }> = new Map();
 
     for (const trade of trades || []) {

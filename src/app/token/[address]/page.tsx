@@ -88,9 +88,16 @@ export default function TokenDetailPage() {
     }
   }, []);
 
+  // Fetch token data only once on page load
   useEffect(() => {
     if (address) {
       fetchToken();
+    }
+  }, [address]);
+
+  // Fetch chart data when period changes
+  useEffect(() => {
+    if (address) {
       fetchChart();
     }
   }, [address, chartPeriod]);
@@ -434,8 +441,8 @@ export default function TokenDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Price Chart</CardTitle>
-                <div className="flex gap-1">
-                  {["1h", "24h", "7d", "30d"].map((p) => (
+                <div className="flex gap-1 flex-wrap">
+                  {["1m", "5m", "15m", "1h", "24h", "7d", "30d"].map((p) => (
                     <Button
                       key={p}
                       variant={chartPeriod === p ? "default" : "ghost"}
