@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const FAUCET_AMOUNT = 100;
+const FAUCET_AMOUNT = 130; // 130 USDK ($130)
 
 // Generate a Solana-style base58 signature (88 chars)
 function generateSignature(): string {

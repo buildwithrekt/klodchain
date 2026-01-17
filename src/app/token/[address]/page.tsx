@@ -173,7 +173,7 @@ export default function TokenDetailPage() {
         : `/api/tokens/${address}/sell`;
 
       const body = tradeType === "buy"
-        ? { walletPubkey, klodAmount: amount }
+        ? { walletPubkey, usdkAmount: amount }
         : { walletPubkey, tokenAmount: amount };
 
       const res = await fetch(endpoint, {
@@ -188,7 +188,7 @@ export default function TokenDetailPage() {
         toast.success(
           tradeType === "buy"
             ? `Bought ${data.trade.tokensReceived.toFixed(2)} ${token?.symbol}`
-            : `Sold ${amount} ${token?.symbol} for ${data.trade.klodReceived.toFixed(4)} KLOD`
+            : `Sold ${amount} ${token?.symbol} for $${data.trade.usdkReceived.toFixed(2)} USDK`
         );
         setTradeAmount("");
         fetchToken();
@@ -358,22 +358,22 @@ export default function TokenDetailPage() {
             <Card>
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Price</p>
-                <p className="text-xl font-bold">{formatPrice(token.price)}</p>
-                <p className="text-xs text-muted-foreground">KLOD</p>
+                <p className="text-xl font-bold">${formatPrice(token.price)}</p>
+                <p className="text-xs text-muted-foreground">USDK</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Market Cap</p>
-                <p className="text-xl font-bold">{formatNumber(token.market_cap)}</p>
-                <p className="text-xs text-muted-foreground">KLOD</p>
+                <p className="text-xl font-bold">${formatNumber(token.market_cap)}</p>
+                <p className="text-xs text-muted-foreground">USDK</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Volume 24h</p>
-                <p className="text-xl font-bold">{formatNumber(token.volume_24h)}</p>
-                <p className="text-xs text-muted-foreground">KLOD</p>
+                <p className="text-xl font-bold">${formatNumber(token.volume_24h)}</p>
+                <p className="text-xs text-muted-foreground">USDK</p>
               </CardContent>
             </Card>
             <Card>
@@ -385,25 +385,45 @@ export default function TokenDetailPage() {
             </Card>
           </div>
 
-          {/* Liquidity Pool */}
+          {/* Virtual Bonding Curve Pool */}
           <Card className="border-primary/30">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold">Liquidity Pool (AMM)</p>
-                <Badge variant="outline">x * y = k</Badge>
+                <p className="text-sm font-semibold">Bonding Curve (Virtual Pool)</p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">x * y = k</Badge>
+                  {(token as any).is_graduated && (
+                    <Badge variant="default" className="bg-green-500">Graduated</Badge>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">KLOD Reserve</p>
+                  <p className="text-xs text-muted-foreground">USDK Reserve</p>
                   <p className="text-lg font-bold font-mono">
-                    {formatNumber(Number(token.reserve_klod) || 4000)}
+                    ${formatNumber(Number((token as any).virtual_usdk_reserve) || 4000)}
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground">{token.symbol} Reserve</p>
                   <p className="text-lg font-bold font-mono">
-                    {formatNumber((Number(token.reserve_token) || 800000000000000) / 1_000_000)}
+                    {formatNumber((Number((token as any).virtual_token_reserve) || 1000000000000000) / 1_000_000)}
                   </p>
+                </div>
+              </div>
+              {/* Progress to graduation */}
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">Progress to graduation</span>
+                  <span className="font-mono">
+                    ${formatNumber(token.market_cap)} / $69K
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${Math.min((token.market_cap / 69000) * 100, 100)}%` }}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -609,12 +629,12 @@ export default function TokenDetailPage() {
               {walletPubkey && (
                 <div className="p-3 rounded-lg bg-muted/50 space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">KLOD Balance</span>
-                    <span className="font-mono">{walletBalance.toFixed(2)}</span>
+                    <span className="text-muted-foreground">USDK Balance</span>
+                    <span className="font-mono">${walletBalance.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{token.symbol} Balance</span>
-                    <span className="font-mono">{tokenBalance.toFixed(2)}</span>
+                    <span className="font-mono">{(tokenBalance / 1_000_000).toFixed(2)}</span>
                   </div>
                 </div>
               )}
@@ -623,7 +643,7 @@ export default function TokenDetailPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <label className="text-sm">
-                    {tradeType === "buy" ? "KLOD Amount" : `${token.symbol} Amount`}
+                    {tradeType === "buy" ? "USDK Amount" : `${token.symbol} Amount`}
                   </label>
                   <button
                     type="button"
@@ -653,12 +673,12 @@ export default function TokenDetailPage() {
               {tradeAmount && parseFloat(tradeAmount) > 0 && (
                 <div className="p-3 rounded-lg border">
                   <p className="text-sm text-muted-foreground">
-                    {tradeType === "buy" ? "You will receive approx." : "You will receive approx."}
+                    You will receive approx.
                   </p>
                   <p className="text-lg font-bold">
                     {tradeType === "buy"
                       ? `${formatNumber(parseFloat(tradeAmount) / token.price)} ${token.symbol}`
-                      : `${formatPrice(parseFloat(tradeAmount) * token.price)} KLOD`}
+                      : `$${formatPrice(parseFloat(tradeAmount) * token.price)} USDK`}
                   </p>
                 </div>
               )}
@@ -690,8 +710,8 @@ export default function TokenDetailPage() {
 
               {/* Price Info */}
               <div className="text-center text-sm text-muted-foreground">
-                <p>Current Price: {formatPrice(token.price)} KLOD</p>
-                <p className="text-xs mt-1">Bonding curve pricing</p>
+                <p>Current Price: ${formatPrice(token.price)} USDK</p>
+                <p className="text-xs mt-1">Virtual bonding curve (pump.fun style)</p>
               </div>
             </CardContent>
           </Card>

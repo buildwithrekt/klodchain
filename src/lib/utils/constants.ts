@@ -8,4 +8,7 @@ export const SOLANA_CONSTANTS = {
   RENT_EXEMPT_MINIMUM: 890_880, // lamports for 0 byte account
 } as const;
 
+// KLOD price in USD (for display purposes)
+export const KLOD_USD_PRICE = 130;
+
 export const SPEED_MULTIPLIERS = [0.5, 1, 2, 5, 10] as const;

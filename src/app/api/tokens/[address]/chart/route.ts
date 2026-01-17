@@ -44,7 +44,7 @@ export async function GET(
     // Get trades for the period
     const { data: trades, error } = await supabase
       .from("memecoin_trades")
-      .select("price_per_token, created_at, klod_amount, trade_type")
+      .select("price_per_token, created_at, usdk_amount, trade_type")
       .eq("memecoin_address", address)
       .gte("created_at", fromDate.toISOString())
       .order("created_at", { ascending: true });
@@ -64,16 +64,19 @@ export async function GET(
     for (const trade of trades || []) {
       const timestamp = new Date(trade.created_at).getTime();
       const bucketKey = Math.floor(timestamp / bucketSize) * bucketSize;
+      // Convert price to number (Supabase returns DECIMAL as string)
+      const price = Number(trade.price_per_token);
+      const amount = Number(trade.usdk_amount || 0);
 
       const existing = buckets.get(bucketKey);
       if (existing) {
-        existing.price = trade.price_per_token; // Use latest price in bucket
-        existing.volume += trade.klod_amount / 1_000_000;
+        existing.price = price; // Use latest price in bucket
+        existing.volume += amount / 1_000_000;
         existing.count++;
       } else {
         buckets.set(bucketKey, {
-          price: trade.price_per_token,
-          volume: trade.klod_amount / 1_000_000,
+          price,
+          volume: amount / 1_000_000,
           count: 1,
         });
       }
@@ -98,16 +101,17 @@ export async function GET(
         .single();
 
       if (token) {
+        const tokenPrice = Number(token.price);
         chartData.push({
           timestamp: new Date(token.created_at).getTime(),
           time: token.created_at,
-          price: token.price,
+          price: tokenPrice,
           volume: 0,
         });
         chartData.push({
           timestamp: now.getTime(),
           time: now.toISOString(),
-          price: token.price,
+          price: tokenPrice,
           volume: 0,
         });
       }

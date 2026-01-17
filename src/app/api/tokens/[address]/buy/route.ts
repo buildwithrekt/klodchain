@@ -15,25 +15,25 @@ function generateSignature(): string {
   return signature;
 }
 
-// AMM constant product formula: x * y = k
-// When buying tokens with KLOD:
-// - Add KLOD to reserve_klod
-// - Remove tokens from reserve_token (maintaining k)
+// Virtual AMM constant product formula: x * y = k (pump.fun style)
+// When buying tokens with USDK:
+// - Add USDK to virtual_usdk_reserve
+// - Remove tokens from virtual_token_reserve (maintaining k)
 function calculateBuyOutput(
-  klodIn: number,
-  reserveKlod: number,
-  reserveToken: number
-): { tokensOut: number; newReserveKlod: number; newReserveToken: number; pricePerToken: number } {
-  const k = reserveKlod * reserveToken;
-  const newReserveKlod = reserveKlod + klodIn;
-  const newReserveToken = k / newReserveKlod;
-  const tokensOut = reserveToken - newReserveToken;
-  const pricePerToken = klodIn / (tokensOut / 1_000_000); // Price per whole token
+  usdkIn: number,
+  virtualUsdkReserve: number,
+  virtualTokenReserve: number
+): { tokensOut: number; newUsdkReserve: number; newTokenReserve: number; pricePerToken: number } {
+  const k = virtualUsdkReserve * virtualTokenReserve;
+  const newUsdkReserve = virtualUsdkReserve + usdkIn;
+  const newTokenReserve = k / newUsdkReserve;
+  const tokensOut = virtualTokenReserve - newTokenReserve;
+  const pricePerToken = usdkIn / (tokensOut / 1_000_000); // Price per whole token in USDK
 
   return {
     tokensOut: Math.floor(tokensOut),
-    newReserveKlod,
-    newReserveToken: Math.floor(newReserveToken),
+    newUsdkReserve,
+    newTokenReserve: Math.floor(newTokenReserve),
     pricePerToken,
   };
 }
@@ -44,7 +44,9 @@ export async function POST(
 ) {
   try {
     const { address } = await params;
-    const { walletPubkey, klodAmount } = await req.json();
+    const { walletPubkey, klodAmount, usdkAmount } = await req.json();
+    // Wallet holds USDK directly - support both param names for compatibility
+    const amount = usdkAmount || klodAmount;
 
     // Validate inputs
     if (!address || !address.endsWith("klod")) {
@@ -61,7 +63,7 @@ export async function POST(
       );
     }
 
-    if (!klodAmount || klodAmount <= 0) {
+    if (!amount || amount <= 0) {
       return NextResponse.json(
         { success: false, error: "Invalid amount" },
         { status: 400 }
@@ -82,9 +84,9 @@ export async function POST(
       );
     }
 
-    if (wallet.balance < klodAmount) {
+    if (wallet.balance < amount) {
       return NextResponse.json(
-        { success: false, error: "Insufficient KLOD balance" },
+        { success: false, error: "Insufficient USDK balance" },
         { status: 400 }
       );
     }
@@ -103,15 +105,24 @@ export async function POST(
       );
     }
 
-    // Use pool reserves (default to initial values if not set)
-    const reserveKlod = Number(token.reserve_klod) || 4000;
-    const reserveToken = Number(token.reserve_token) || 800000000000000;
+    // Check if token is graduated (liquidity moved to real DEX)
+    if (token.is_graduated) {
+      return NextResponse.json(
+        { success: false, error: "Token has graduated. Trade on DEX." },
+        { status: 400 }
+      );
+    }
 
-    // Calculate tokens to receive using AMM formula
-    const { tokensOut, newReserveKlod, newReserveToken, pricePerToken } = calculateBuyOutput(
-      klodAmount,
-      reserveKlod,
-      reserveToken
+    // Use virtual pool reserves (pump.fun style bonding curve)
+    // Default: 4000 USDK + 1B tokens = $4000 initial market cap
+    const virtualUsdkReserve = Number(token.virtual_usdk_reserve) || 4000;
+    const virtualTokenReserve = Number(token.virtual_token_reserve) || 1000000000000000;
+
+    // Calculate tokens to receive using virtual AMM formula (wallet and pool both use USDK)
+    const { tokensOut, newUsdkReserve, newTokenReserve, pricePerToken } = calculateBuyOutput(
+      amount,
+      virtualUsdkReserve,
+      virtualTokenReserve
     );
 
     if (tokensOut <= 0) {
@@ -121,19 +132,19 @@ export async function POST(
       );
     }
 
-    // Deduct KLOD from wallet
+    // Deduct USDK from wallet balance
     const { error: deductError } = await supabaseAdmin
       .from("wallets")
       .update({
-        balance: wallet.balance - klodAmount,
+        balance: wallet.balance - amount,
         transaction_count: wallet.transaction_count + 1,
-        total_sent: wallet.total_sent + klodAmount,
+        total_sent: wallet.total_sent + amount,
       })
       .eq("pubkey", walletPubkey);
 
     if (deductError) {
       return NextResponse.json(
-        { success: false, error: "Failed to deduct KLOD" },
+        { success: false, error: "Failed to deduct USDK" },
         { status: 500 }
       );
     }
@@ -162,21 +173,29 @@ export async function POST(
       });
     }
 
-    // Calculate new price from pool reserves
-    const newPrice = newReserveKlod / (newReserveToken / 1_000_000);
+    // Calculate new price from virtual pool reserves (price in USDK)
+    const newPrice = newUsdkReserve / (newTokenReserve / 1_000_000);
     const newCirculating = token.circulating_supply + tokensOut;
-    const newMarketCap = (newCirculating / 1_000_000) * newPrice;
+    const totalSupply = Number(token.total_supply) || 1000000000000000;
+    const newMarketCap = (totalSupply / 1_000_000) * newPrice;
+    const totalUsdkRaised = Number(token.total_usdk_raised || 0) + amount;
 
-    // Update token with new pool reserves and stats
+    // Check for graduation (market cap >= threshold)
+    const graduationThreshold = Number(token.graduation_threshold) || 69000;
+    const shouldGraduate = newMarketCap >= graduationThreshold;
+
+    // Update token with new virtual pool reserves and stats
     await supabaseAdmin
       .from("memecoins")
       .update({
-        reserve_klod: newReserveKlod,
-        reserve_token: newReserveToken,
+        virtual_usdk_reserve: newUsdkReserve,
+        virtual_token_reserve: newTokenReserve,
         circulating_supply: newCirculating,
         price: newPrice,
         market_cap: newMarketCap,
-        volume_24h: (token.volume_24h || 0) + klodAmount,
+        volume_24h: (token.volume_24h || 0) + amount,
+        total_usdk_raised: totalUsdkRaised,
+        ...(shouldGraduate && { is_graduated: true, graduated_at: new Date().toISOString() }),
       })
       .eq("address", address);
 
@@ -186,7 +205,7 @@ export async function POST(
       memecoin_address: address,
       trader_pubkey: walletPubkey,
       trade_type: "buy",
-      klod_amount: klodAmount * 1_000_000,
+      usdk_amount: Math.floor(amount * 1_000_000), // Store USDK in base units
       token_amount: tokensOut,
       price_per_token: pricePerToken,
       signature,
@@ -208,13 +227,13 @@ export async function POST(
       transaction_type: "token_buy",
       from_pubkey: walletPubkey,
       to_pubkey: address,
-      amount: klodAmount * 1_000_000,
+      amount: amount * 1_000_000, // Store USDK amount in base units
       program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       instruction_data: {
         type: "token_buy",
         memecoin_address: address,
         token_symbol: token.symbol,
-        klod_spent: klodAmount,
+        usdk_spent: amount,
         tokens_received: tokensOut / 1_000_000,
         price_per_token: pricePerToken,
       },
@@ -225,10 +244,11 @@ export async function POST(
       success: true,
       trade: {
         signature,
-        klodSpent: klodAmount,
+        usdkSpent: amount,
         tokensReceived: tokensOut / 1_000_000,
         pricePerToken,
-        newBalance: wallet.balance - klodAmount,
+        newBalance: wallet.balance - amount,
+        graduated: shouldGraduate,
       },
     });
   } catch (error) {

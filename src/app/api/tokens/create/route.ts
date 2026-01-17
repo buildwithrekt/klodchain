@@ -132,13 +132,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Initial pool: 4000 KLOD + 800M tokens (virtual liquidity)
-    // This gives initial price of 4000/800M = 0.000005 KLOD per token
-    const INITIAL_RESERVE_KLOD = 4000;
-    const INITIAL_RESERVE_TOKEN = 800000000000000; // 800M with 6 decimals
-    const INITIAL_PRICE = INITIAL_RESERVE_KLOD / (INITIAL_RESERVE_TOKEN / 1_000_000);
+    // Virtual pool (pump.fun style bonding curve)
+    // Initial: 4000 USDK + 1B tokens (virtual liquidity - no real tokens deposited)
+    // Initial price = 4000/1B = 0.000004 USDK per token
+    // Initial market cap = 1B tokens * 0.000004 = $4,000
+    // Graduation at $69K market cap (like pump.fun)
+    const INITIAL_VIRTUAL_USDK = 4000;
+    const INITIAL_VIRTUAL_TOKEN = 1000000000000000; // 1B with 6 decimals
+    const INITIAL_PRICE = INITIAL_VIRTUAL_USDK / (INITIAL_VIRTUAL_TOKEN / 1_000_000);
+    const TOTAL_SUPPLY = 1000000000000000; // 1B with 6 decimals
+    const INITIAL_MARKET_CAP = (TOTAL_SUPPLY / 1_000_000) * INITIAL_PRICE; // $4,000
 
-    // Create token
+    // Create token with virtual pool
     const { data: token, error: tokenError } = await supabaseAdmin
       .from("memecoins")
       .insert({
@@ -151,13 +156,16 @@ export async function POST(req: NextRequest) {
         website_url: websiteUrl || null,
         telegram_url: telegramUrl || null,
         creator_pubkey: creatorPubkey,
-        total_supply: 1000000000000000, // 1B with 6 decimals
+        total_supply: TOTAL_SUPPLY,
         circulating_supply: 0,
         price: INITIAL_PRICE,
-        market_cap: 0,
+        market_cap: INITIAL_MARKET_CAP,
         volume_24h: 0,
-        reserve_klod: INITIAL_RESERVE_KLOD,
-        reserve_token: INITIAL_RESERVE_TOKEN,
+        virtual_usdk_reserve: INITIAL_VIRTUAL_USDK,
+        virtual_token_reserve: INITIAL_VIRTUAL_TOKEN,
+        is_graduated: false,
+        graduation_threshold: 69000, // $69K market cap for graduation
+        total_usdk_raised: 0,
       })
       .select()
       .single();

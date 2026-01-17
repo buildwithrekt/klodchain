@@ -491,7 +491,7 @@ export default function WalletPage() {
         <CardContent className="py-3 flex justify-between items-center">
           <div>
             <p className="text-xs text-muted-foreground uppercase">Faucet</p>
-            <p className="text-foreground">100 $klodchain / 24h</p>
+            <p className="text-foreground">$130 USDK / 24h</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground uppercase">Status</p>
