@@ -38,7 +38,7 @@ function TransactionCard({ tx }: { tx: Transaction }) {
       href={`/explorer/tx/${tx.signature}`}
       className="flex items-center justify-between gap-2 rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
           <Receipt className="h-5 w-5 text-primary" />
         </div>
         <div className="min-w-0">
@@ -59,7 +59,7 @@ function TransactionCard({ tx }: { tx: Transaction }) {
               {tx.status}
             </Badge>
           </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+          <div className="pt-4 sm:pt-0 flex items-center gap-1 text-xs text-muted-foreground truncate">
             <span className="font-mono">{shortenPubkey(tx.from_pubkey, 4)}</span>
             {tx.to_pubkey && (
               <>
