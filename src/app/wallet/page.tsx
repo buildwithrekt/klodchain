@@ -180,7 +180,7 @@ export default function WalletPage() {
       const data = await res.json();
 
       if (data.success) {
-        toast.success(`Claimed ${data.amount} $klodchain!`);
+        toast.success(`Claimed $${data.amount} USDK!`);
 
         // Update wallet state with new data
         setWallet((prev) => prev ? {
@@ -408,9 +408,9 @@ export default function WalletPage() {
           </p>
           <div className="flex items-baseline justify-center gap-2 mb-2">
             <span className="text-4xl font-bold text-foreground">
-              {wallet?.balance?.toLocaleString() ?? 0}
+              ${wallet?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}
             </span>
-            <span className="text-xl text-primary">$klodchain</span>
+            <span className="text-xl text-primary">USDK</span>
           </div>
           <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs">
             <span>{formatAddress(walletAddress)}</span>
@@ -519,13 +519,13 @@ export default function WalletPage() {
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-xs text-muted-foreground uppercase mb-1">Received</p>
-            <p className="text-xl text-foreground">{wallet?.totalReceived ?? 0}</p>
+            <p className="text-xl text-foreground">${wallet?.totalReceived?.toFixed(2) ?? '0.00'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-xs text-muted-foreground uppercase mb-1">Sent</p>
-            <p className="text-xl text-foreground">{wallet?.totalSent ?? 0}</p>
+            <p className="text-xl text-foreground">${wallet?.totalSent?.toFixed(2) ?? '0.00'}</p>
           </CardContent>
         </Card>
       </div>
@@ -579,7 +579,7 @@ export default function WalletPage() {
                     </div>
                   </div>
                   <p className={tx.to_pubkey === walletAddress ? "text-green-400" : "text-destructive"}>
-                    {tx.to_pubkey === walletAddress ? "+" : "-"}{tx.amount} $klodchain
+                    {tx.to_pubkey === walletAddress ? "+" : "-"}${tx.amount} USDK
                   </p>
                 </Link>
               ))}

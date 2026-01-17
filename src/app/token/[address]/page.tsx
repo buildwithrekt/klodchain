@@ -634,7 +634,7 @@ export default function TokenDetailPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{token.symbol} Balance</span>
-                    <span className="font-mono">{(tokenBalance / 1_000_000).toFixed(2)}</span>
+                    <span className="font-mono">{tokenBalance.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                   </div>
                 </div>
               )}
