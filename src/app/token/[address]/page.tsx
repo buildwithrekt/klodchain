@@ -295,14 +295,16 @@ export default function TokenDetailPage() {
       <div className="flex flex-col sm:flex-row items-start gap-4">
         <div className="flex items-center gap-4">
           {token.image_url ? (
-            <Image
-              src={token.image_url}
-              alt={token.name}
-              width={64}
-              height={64}
-              className="rounded-full"
-              unoptimized
-            />
+            <div className="h-16 w-16 rounded-full overflow-hidden flex-shrink-0">
+              <Image
+                src={token.image_url}
+                alt={token.name}
+                width={64}
+                height={64}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            </div>
           ) : (
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-2xl font-bold text-primary">

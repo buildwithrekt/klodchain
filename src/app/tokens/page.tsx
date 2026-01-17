@@ -305,13 +305,15 @@ export default function TokensPage() {
                 <div className="flex items-center gap-4">
                   {imagePreview ? (
                     <div className="relative">
-                      <Image
-                        src={imagePreview}
-                        alt="Preview"
-                        width={64}
-                        height={64}
-                        className="rounded-full object-cover"
-                      />
+                      <div className="h-16 w-16 rounded-full overflow-hidden">
+                        <Image
+                          src={imagePreview}
+                          alt="Preview"
+                          width={64}
+                          height={64}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={removeImage}
@@ -509,14 +511,16 @@ export default function TokensPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3 mb-3">
                     {token.image_url ? (
-                      <Image
-                        src={token.image_url}
-                        alt={token.name}
-                        width={48}
-                        height={48}
-                        className="rounded-full object-cover"
-                        unoptimized
-                      />
+                      <div className="h-12 w-12 rounded-full overflow-hidden flex-shrink-0">
+                        <Image
+                          src={token.image_url}
+                          alt={token.name}
+                          width={48}
+                          height={48}
+                          className="h-full w-full object-cover"
+                          unoptimized
+                        />
+                      </div>
                     ) : (
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-xl font-bold text-primary">
@@ -533,15 +537,15 @@ export default function TokensPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Price</span>
-                      <span className="font-mono">{formatPrice(token.price)} KLOD</span>
+                      <span className="font-mono">{formatPrice(token.price)} USDK</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Market Cap</span>
-                      <span className="font-mono">{formatMarketCap(token.market_cap)} KLOD</span>
+                      <span className="font-mono">{formatMarketCap(token.market_cap)} USDK</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Volume 24h</span>
-                      <span className="font-mono">{formatMarketCap(token.volume_24h)} KLOD</span>
+                      <span className="font-mono">{formatMarketCap(token.volume_24h)} USDK</span>
                     </div>
                   </div>
 
