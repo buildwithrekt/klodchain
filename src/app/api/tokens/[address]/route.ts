@@ -51,12 +51,12 @@ export async function GET(
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: dayTrades } = await supabase
       .from("memecoin_trades")
-      .select("klod_amount")
+      .select("usdk_amount")
       .eq("memecoin_address", address)
       .gte("created_at", oneDayAgo);
 
     const volume24h = (dayTrades || []).reduce(
-      (sum, t) => sum + (t.klod_amount || 0),
+      (sum, t) => sum + (t.usdk_amount || 0),
       0
     );
 
