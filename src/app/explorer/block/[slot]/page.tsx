@@ -89,44 +89,26 @@ export default function BlockDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-      {/* Breadcrumb & Navigation */}
-      <div className="flex items-center justify-between">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/">Home</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/explorer">Explorer</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Block #{slot.toLocaleString()}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <div className="flex items-center gap-2">
-          {block.parent_slot !== null && (
-            <Link href={`/explorer/block/${block.parent_slot}`}>
-              <Button variant="outline" size="sm">
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-            </Link>
-          )}
-          <Link href={`/explorer/block/${slot + 1}`}>
-            <Button variant="outline" size="sm">
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      </div>
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/explorer">Explorer</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Block #{slot.toLocaleString()}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
         {/* Block Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -250,6 +232,26 @@ export default function BlockDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          {block.parent_slot !== null ? (
+            <Link href={`/explorer/block/${block.parent_slot}`}>
+              <Button variant="outline">
+                <ChevronLeft className="h-4 w-4" />
+                Previous Block
+              </Button>
+            </Link>
+          ) : (
+            <div />
+          )}
+          <Link href={`/explorer/block/${slot + 1}`}>
+            <Button variant="outline">
+              Next Block
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
     </div>
   );
 }
