@@ -157,7 +157,7 @@ export default function BlockDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Leader</p>
-                <p className="font-mono text-sm">{block.leader_pubkey}</p>
+                <p className="font-mono text-sm break-all">{block.leader_pubkey}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">PoH Hash</p>
