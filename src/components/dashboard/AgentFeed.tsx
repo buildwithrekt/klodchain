@@ -102,11 +102,11 @@ export function AgentFeed() {
       setIsThinking(false);
     };
 
-    // Initial thought after 30 seconds
-    const initialTimeout = setTimeout(triggerThought, 30000);
+    // Initial thought after 2 minutes
+    const initialTimeout = setTimeout(triggerThought, 120000);
 
-    // Then every 5 minutes (300 seconds)
-    const interval = setInterval(triggerThought, 300000);
+    // Then every 30 minutes
+    const interval = setInterval(triggerThought, 1800000);
 
     return () => {
       clearTimeout(initialTimeout);
