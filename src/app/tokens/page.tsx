@@ -503,7 +503,7 @@ export default function TokensPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {tokens.map((token) => (
+          {tokens.filter(t => t && t.symbol && t.name).map((token) => (
             <Link key={token.address} href={`/token/${token.address}`}>
               <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                 <CardContent className="p-4">
@@ -520,13 +520,13 @@ export default function TokensPage() {
                     ) : (
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-xl font-bold text-primary">
-                          {token.symbol.charAt(0)}
+                          {token.symbol?.charAt(0) || "?"}
                         </span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{token.name}</h3>
-                      <p className="text-sm text-muted-foreground">${token.symbol}</p>
+                      <h3 className="font-semibold truncate">{token.name || "Unknown"}</h3>
+                      <p className="text-sm text-muted-foreground">${token.symbol || "???"}</p>
                     </div>
                   </div>
 
