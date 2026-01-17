@@ -26,6 +26,7 @@ interface Endpoint {
 }
 
 const endpoints: Endpoint[] = [
+  // Blocks
   {
     method: "GET",
     path: "/api/v1/blocks",
@@ -201,6 +202,88 @@ const endpoints: Endpoint[] = [
       "program_call": 1500
     },
     "validators": [...]
+  }
+}`,
+  },
+  // Tokens (Memecoins)
+  {
+    method: "GET",
+    path: "/api/v1/tokens",
+    description: "Get a list of memecoins with pagination, search, and sorting",
+    queryParams: [
+      { name: "limit", type: "number", description: "Number of tokens to return (max 100)", default: "20" },
+      { name: "offset", type: "number", description: "Number of tokens to skip", default: "0" },
+      { name: "sort", type: "string", description: "Sort by: 'created_at', 'market_cap', 'volume', 'price'", default: "created_at" },
+      { name: "order", type: "string", description: "Sort order: 'asc' or 'desc'", default: "desc" },
+      { name: "search", type: "string", description: "Search by name, symbol, or address" },
+    ],
+    response: `{
+  "success": true,
+  "data": [
+    {
+      "address": "dogeklod",
+      "name": "Doge Klod",
+      "symbol": "DOGE",
+      "description": "The original meme coin on Klodchain",
+      "image_url": "https://...",
+      "creator_pubkey": "klod_abc123...",
+      "total_supply": 1000000000000000,
+      "circulating_supply": 200000000000000,
+      "price": 0.000001,
+      "market_cap": 200,
+      "volume_24h": 50.5,
+      "reserve_klod": 4000,
+      "reserve_token": 800000000000000,
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 25,
+    "limit": 20,
+    "offset": 0,
+    "hasMore": true
+  }
+}`,
+  },
+  {
+    method: "GET",
+    path: "/api/v1/tokens/:address",
+    description: "Get detailed information about a specific token including holder count and recent trades",
+    params: [{ name: "address", type: "string", description: "Token address (ends with 'klod')", required: true }],
+    response: `{
+  "success": true,
+  "data": {
+    "address": "dogeklod",
+    "name": "Doge Klod",
+    "symbol": "DOGE",
+    "description": "The original meme coin on Klodchain",
+    "image_url": "https://...",
+    "twitter_url": "https://twitter.com/...",
+    "website_url": "https://...",
+    "telegram_url": "https://t.me/...",
+    "creator_pubkey": "klod_abc123...",
+    "total_supply": 1000000000000000,
+    "circulating_supply": 200000000000000,
+    "price": 0.000001,
+    "market_cap": 200,
+    "volume_24h": 50.5,
+    "reserve_klod": 4000,
+    "reserve_token": 800000000000000,
+    "holder_count": 42,
+    "recent_trades": [
+      {
+        "id": "uuid",
+        "trader_pubkey": "klod_xyz...",
+        "trade_type": "buy",
+        "klod_amount": 100000000,
+        "token_amount": 50000000000,
+        "price_per_token": 0.000002,
+        "signature": "sig123...",
+        "created_at": "2024-01-15T11:00:00Z"
+      }
+    ],
+    "volume_24h_calculated": 50.5,
+    "created_at": "2024-01-15T10:30:00Z"
   }
 }`,
   },
@@ -389,10 +472,11 @@ X-RateLimit-Reset: 1705312200000`}
         <h2 className="text-2xl font-bold">Endpoints</h2>
 
         <Tabs defaultValue="blocks" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="blocks">Blocks</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="tokens">Tokens</TabsTrigger>
             <TabsTrigger value="stats">Stats</TabsTrigger>
           </TabsList>
 
@@ -408,6 +492,11 @@ X-RateLimit-Reset: 1705312200000`}
 
           <TabsContent value="accounts" className="mt-4">
             <EndpointCard endpoint={endpoints[4]} />
+          </TabsContent>
+
+          <TabsContent value="tokens" className="mt-4">
+            <EndpointCard endpoint={endpoints[6]} />
+            <EndpointCard endpoint={endpoints[7]} />
           </TabsContent>
 
           <TabsContent value="stats" className="mt-4">
