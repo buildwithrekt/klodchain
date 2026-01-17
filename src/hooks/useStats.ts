@@ -11,7 +11,7 @@ export interface StatsData {
   };
   tpsHistory: Array<{ slot: number; tps: number; recorded_at: string }>;
   txByType: Array<{ type: string; count: number }>;
-  txByStatus: Array<{ status: string; count: number }>;
+  txByStatus: Array<{ slot: number; confirmed: number; pending: number; failed: number }>;
   validatorStats: Array<{
     name: string;
     pubkey: string;

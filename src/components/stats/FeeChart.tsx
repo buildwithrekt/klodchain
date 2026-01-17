@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Coins } from "lucide-react";
+import { useChartColors } from "@/hooks/useChartColors";
 
 interface FeeChartProps {
   data: Array<{ slot: number; avgFee: number }>;
@@ -19,6 +20,8 @@ interface FeeChartProps {
 }
 
 export function FeeChart({ data, loading }: FeeChartProps) {
+  const colors = useChartColors();
+
   if (loading) {
     return (
       <Card>
@@ -55,28 +58,28 @@ export function FeeChart({ data, loading }: FeeChartProps) {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="feeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0} />
+                  <stop offset="5%" stopColor={colors.chart3} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={colors.chart3} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(191, 58%, 21%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
               <XAxis
                 dataKey="index"
-                tick={{ fill: "hsl(180, 77%, 60%)", fontSize: 10 }}
-                tickLine={{ stroke: "hsl(191, 58%, 21%)" }}
-                axisLine={{ stroke: "hsl(191, 58%, 21%)" }}
+                tick={{ fill: colors.foreground, fontSize: 10 }}
+                tickLine={{ stroke: colors.border }}
+                axisLine={{ stroke: colors.border }}
               />
               <YAxis
-                tick={{ fill: "hsl(180, 77%, 60%)", fontSize: 10 }}
-                tickLine={{ stroke: "hsl(191, 58%, 21%)" }}
-                axisLine={{ stroke: "hsl(191, 58%, 21%)" }}
+                tick={{ fill: colors.foreground, fontSize: 10 }}
+                tickLine={{ stroke: colors.border }}
+                axisLine={{ stroke: colors.border }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(192, 51%, 10%)",
-                  border: "1px solid hsl(191, 58%, 21%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: "4px",
-                  color: "hsl(180, 77%, 60%)",
+                  color: colors.foreground,
                 }}
                 labelFormatter={(i) => `Slot ${chartData[i]?.slot || i}`}
                 formatter={(value: number) => [`${value.toLocaleString()} lamports`, "Avg Fee"]}
@@ -84,7 +87,7 @@ export function FeeChart({ data, loading }: FeeChartProps) {
               <Area
                 type="monotone"
                 dataKey="fee"
-                stroke="hsl(38, 92%, 50%)"
+                stroke={colors.chart3}
                 fill="url(#feeGradient)"
                 strokeWidth={2}
               />

@@ -10,35 +10,26 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
+  Legend,
 } from "recharts";
 import { CheckCircle } from "lucide-react";
+import { useChartColors } from "@/hooks/useChartColors";
 
 interface TxStatusChartProps {
-  data: Array<{ status: string; count: number }>;
+  data: Array<{ slot: number; confirmed: number; pending: number; failed: number }>;
   loading?: boolean;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  confirmed: "hsl(142, 76%, 46%)",
-  pending: "hsl(38, 92%, 50%)",
-  failed: "hsl(0, 84%, 60%)",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  confirmed: "Confirmed",
-  pending: "Pending",
-  failed: "Failed",
-};
-
 export function TxStatusChart({ data, loading }: TxStatusChartProps) {
+  const colors = useChartColors();
+
   if (loading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-emerald-400" />
-            Transaction Status
+            Transaction Status Over Time
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -49,9 +40,10 @@ export function TxStatusChart({ data, loading }: TxStatusChartProps) {
   }
 
   const chartData = data.map((d) => ({
-    name: STATUS_LABELS[d.status] || d.status,
-    value: d.count,
-    status: d.status,
+    slot: d.slot,
+    Confirmed: d.confirmed,
+    Pending: d.pending,
+    Failed: d.failed,
   }));
 
   return (
@@ -59,42 +51,60 @@ export function TxStatusChart({ data, loading }: TxStatusChartProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-emerald-400" />
-          Transaction Status
+          Transaction Status Over Time
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(191, 58%, 21%)" />
+            <BarChart data={chartData} barSize={8} barGap={1}>
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} opacity={0.3} />
               <XAxis
-                dataKey="name"
-                tick={{ fill: "hsl(180, 77%, 60%)", fontSize: 11 }}
-                tickLine={{ stroke: "hsl(191, 58%, 21%)" }}
-                axisLine={{ stroke: "hsl(191, 58%, 21%)" }}
+                dataKey="slot"
+                tick={{ fill: colors.foreground, fontSize: 9 }}
+                tickLine={{ stroke: colors.border }}
+                axisLine={{ stroke: colors.border }}
+                tickFormatter={(value) => `${value}`}
+                interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fill: "hsl(180, 77%, 60%)", fontSize: 10 }}
-                tickLine={{ stroke: "hsl(191, 58%, 21%)" }}
-                axisLine={{ stroke: "hsl(191, 58%, 21%)" }}
+                tick={{ fill: colors.foreground, fontSize: 9 }}
+                tickLine={{ stroke: colors.border }}
+                axisLine={{ stroke: colors.border }}
+                width={30}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(192, 51%, 10%)",
-                  border: "1px solid hsl(191, 58%, 21%)",
-                  borderRadius: "4px",
-                  color: "hsl(180, 77%, 60%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: "6px",
+                  color: colors.foreground,
+                  fontSize: "12px",
                 }}
-                formatter={(value: number) => [`${value} txs`, "Count"]}
+                labelFormatter={(slot) => `Slot ${slot}`}
               />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={STATUS_COLORS[entry.status] || "hsl(180, 77%, 60%)"}
-                  />
-                ))}
-              </Bar>
+              <Legend
+                wrapperStyle={{ fontSize: "11px", color: colors.foreground }}
+                iconSize={8}
+              />
+              <Bar
+                dataKey="Confirmed"
+                stackId="status"
+                fill={colors.chart1}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="Pending"
+                stackId="status"
+                fill={colors.chart2}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="Failed"
+                stackId="status"
+                fill="hsl(0, 72%, 50%)"
+                radius={[2, 2, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

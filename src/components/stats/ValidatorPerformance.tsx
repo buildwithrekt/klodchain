@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Users } from "lucide-react";
+import { useChartColors } from "@/hooks/useChartColors";
 
 interface ValidatorPerformanceProps {
   data: Array<{
@@ -25,6 +26,8 @@ interface ValidatorPerformanceProps {
 }
 
 export function ValidatorPerformance({ data, loading }: ValidatorPerformanceProps) {
+  const colors = useChartColors();
+
   if (loading) {
     return (
       <Card>
@@ -58,33 +61,33 @@ export function ValidatorPerformance({ data, loading }: ValidatorPerformanceProp
         <div className="h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(191, 58%, 21%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
               <XAxis
                 type="number"
-                tick={{ fill: "hsl(180, 77%, 60%)", fontSize: 10 }}
-                tickLine={{ stroke: "hsl(191, 58%, 21%)" }}
-                axisLine={{ stroke: "hsl(191, 58%, 21%)" }}
+                tick={{ fill: colors.foreground, fontSize: 10 }}
+                tickLine={{ stroke: colors.border }}
+                axisLine={{ stroke: colors.border }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
-                tick={{ fill: "hsl(180, 77%, 60%)", fontSize: 11 }}
-                tickLine={{ stroke: "hsl(191, 58%, 21%)" }}
-                axisLine={{ stroke: "hsl(191, 58%, 21%)" }}
+                tick={{ fill: colors.foreground, fontSize: 11 }}
+                tickLine={{ stroke: colors.border }}
+                axisLine={{ stroke: colors.border }}
                 width={50}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(192, 51%, 10%)",
-                  border: "1px solid hsl(191, 58%, 21%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: "4px",
-                  color: "hsl(180, 77%, 60%)",
+                  color: colors.foreground,
                 }}
                 formatter={(value: number) => [`${value} blocks`, "Produced"]}
               />
               <Bar
                 dataKey="blocks"
-                fill="hsl(142, 76%, 46%)"
+                fill={colors.chart2}
                 radius={[0, 4, 4, 0]}
               />
             </BarChart>

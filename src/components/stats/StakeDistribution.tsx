@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Coins } from "lucide-react";
 import { SOLANA_CONSTANTS } from "@/lib/utils/constants";
+import { useChartColors } from "@/hooks/useChartColors";
 
 interface StakeDistributionProps {
   data: Array<{
@@ -14,16 +15,9 @@ interface StakeDistributionProps {
   loading?: boolean;
 }
 
-const COLORS = [
-  "hsl(180, 77%, 60%)",
-  "hsl(180, 77%, 50%)",
-  "hsl(180, 77%, 40%)",
-  "hsl(192, 51%, 40%)",
-  "hsl(192, 51%, 30%)",
-  "hsl(192, 51%, 25%)",
-];
-
 export function StakeDistribution({ data, loading }: StakeDistributionProps) {
+  const colors = useChartColors();
+  const COLORS = [colors.chart1, colors.chart2, colors.chart3, colors.chart4, colors.chart5, colors.chart1];
   if (loading) {
     return (
       <Card>
@@ -72,15 +66,15 @@ export function StakeDistribution({ data, loading }: StakeDistributionProps) {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(192, 51%, 10%)",
-                  border: "1px solid hsl(191, 58%, 21%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: "4px",
-                  color: "hsl(180, 77%, 60%)",
+                  color: colors.foreground,
                 }}
                 formatter={(value: number) => [`${value.toFixed(0)} KLOD`, "Stake"]}
               />
               <Legend
-                wrapperStyle={{ fontSize: "12px", color: "hsl(180, 77%, 60%)" }}
+                wrapperStyle={{ fontSize: "12px", color: colors.foreground }}
               />
             </PieChart>
           </ResponsiveContainer>

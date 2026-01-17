@@ -34,8 +34,12 @@ export async function GET() {
       // Transaction by type
       supabase.from("transactions").select("transaction_type"),
 
-      // Transaction by status
-      supabase.from("transactions").select("status"),
+      // Transaction by status with time (slot)
+      supabase
+        .from("transactions")
+        .select("status, slot, created_at")
+        .order("created_at", { ascending: false })
+        .limit(2000),
 
       // Validators with stats
       supabase
@@ -82,15 +86,29 @@ export async function GET() {
       }, {})
     ).map(([type, count]) => ({ type, count }));
 
-    // Aggregate transaction status
+    // Aggregate transaction status by time (grouped by slot ranges)
     const txStatuses = txByStatusResult.data || [];
-    const txByStatus = Object.entries(
-      txStatuses.reduce((acc: Record<string, number>, tx) => {
-        const status = tx.status || "unknown";
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {})
-    ).map(([status, count]) => ({ status, count }));
+
+    // Group by slot ranges (every 10 slots)
+    const statusBySlot = txStatuses.reduce((acc: Record<number, Record<string, number>>, tx: any) => {
+      const slotGroup = Math.floor((tx.slot || 0) / 10) * 10;
+      if (!acc[slotGroup]) {
+        acc[slotGroup] = { confirmed: 0, pending: 0, failed: 0 };
+      }
+      const status = tx.status || "pending";
+      acc[slotGroup][status] = (acc[slotGroup][status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const txByStatus = Object.entries(statusBySlot)
+      .map(([slot, counts]) => ({
+        slot: parseInt(slot),
+        confirmed: (counts as any).confirmed || 0,
+        pending: (counts as any).pending || 0,
+        failed: (counts as any).failed || 0,
+      }))
+      .sort((a, b) => a.slot - b.slot)
+      .slice(-30);
 
     // Validator stats
     const validatorStats = (validatorsResult.data || []).map((v) => ({

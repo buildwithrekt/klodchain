@@ -1,17 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { TpsCounter } from "@/components/dashboard/TpsCounter";
+import { ThemeSelector } from "@/components/layout/ThemeSelector";
 import {
   Menu,
   Search,
@@ -36,6 +38,7 @@ const NAV_LINKS = [
 
 export function Header() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -56,53 +59,40 @@ export function Header() {
           </Badge>
         </div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-4">
+        {/* Navigation */}
+        <div className="flex items-center gap-2">
           <TpsCounter />
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm transition-colors ${
-                isActive(link.href)
-                  ? "text-primary font-medium"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-
-        {/* Mobile Navigation */}
-        <div className="flex lg:hidden items-center gap-2">
-          <TpsCounter />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <ThemeSelector />
+          <Drawer open={open} onOpenChange={setOpen} direction="right">
+            <DrawerTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menu</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {NAV_LINKS.map((link, index) => (
-                <div key={link.href}>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={link.href}
-                      className={`flex items-center gap-2 cursor-pointer ${
-                        isActive(link.href) ? "text-primary" : ""
-                      }`}
-                    >
-                      <link.icon className="h-4 w-4" />
-                      {link.label}
-                    </Link>
-                  </DropdownMenuItem>
-                  {index === 3 && <DropdownMenuSeparator />}
-                </div>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader className="border-b">
+                <DrawerTitle>klodchain</DrawerTitle>
+              </DrawerHeader>
+              <nav className="flex flex-col p-4 gap-1">
+                {NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                      isActive(link.href)
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <link.icon className="h-5 w-5" />
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
     </header>

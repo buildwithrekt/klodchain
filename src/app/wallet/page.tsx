@@ -257,7 +257,7 @@ export default function WalletPage() {
     return (
       <div className="container mx-auto px-4 py-6 max-w-xl">
         {/* Balance Skeleton */}
-        <Card className="border-primary/30 mb-4">
+        <Card className="mb-4">
           <CardContent className="py-6 text-center">
             <Skeleton className="h-3 w-24 mx-auto mb-3" />
             <Skeleton className="h-10 w-48 mx-auto mb-2" />
@@ -331,9 +331,9 @@ export default function WalletPage() {
   if (!walletAddress) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-xl">
-        <Card className="border-primary/30 mb-6">
+        <Card className="mb-6">
           <CardContent className="py-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-muted border border-primary/50 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-muted flex items-center justify-center">
               <div className="w-8 h-8 rotate-45 bg-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -401,7 +401,7 @@ export default function WalletPage() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-xl">
       {/* Balance Card */}
-      <Card className="border-primary/30 mb-4">
+      <Card className="mb-4">
         <CardContent className="py-6 text-center">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
             Total Balance

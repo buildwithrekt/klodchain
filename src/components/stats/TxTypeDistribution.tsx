@@ -4,24 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Layers } from "lucide-react";
+import { useChartColors } from "@/hooks/useChartColors";
 
 interface TxTypeDistributionProps {
   data: Array<{ type: string; count: number }>;
   loading?: boolean;
 }
-
-const COLORS = [
-  "hsl(180, 77%, 60%)",  // cyan - transfer
-  "hsl(200, 77%, 55%)",  // blue - token_transfer
-  "hsl(142, 76%, 46%)",  // green - create_account
-  "hsl(38, 92%, 50%)",   // orange - program_call
-  "hsl(262, 83%, 58%)",  // purple - stake
-  "hsl(0, 84%, 60%)",    // red - vote
-  "hsl(320, 70%, 55%)",  // pink - faucet_claim
-  "hsl(45, 93%, 47%)",   // gold - token_create
-  "hsl(120, 70%, 50%)",  // bright green - token_buy
-  "hsl(0, 70%, 50%)",    // bright red - token_sell
-];
 
 const TYPE_LABELS: Record<string, string> = {
   transfer: "Transfer",
@@ -37,6 +25,9 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export function TxTypeDistribution({ data, loading }: TxTypeDistributionProps) {
+  const colors = useChartColors();
+  const COLORS = [colors.chart1, colors.chart2, colors.chart3, colors.chart4, colors.chart5];
+
   if (loading) {
     return (
       <Card>
@@ -85,14 +76,14 @@ export function TxTypeDistribution({ data, loading }: TxTypeDistributionProps) {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(192, 51%, 10%)",
-                  border: "1px solid hsl(191, 58%, 21%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: "4px",
-                  color: "hsl(180, 77%, 60%)",
+                  color: colors.foreground,
                 }}
               />
               <Legend
-                wrapperStyle={{ fontSize: "12px", color: "hsl(180, 77%, 60%)" }}
+                wrapperStyle={{ fontSize: "12px", color: colors.foreground }}
               />
             </PieChart>
           </ResponsiveContainer>
