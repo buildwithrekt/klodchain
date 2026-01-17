@@ -291,6 +291,7 @@ export default function TokenDetailPage() {
               width={64}
               height={64}
               className="rounded-full"
+              unoptimized
             />
           ) : (
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
