@@ -89,14 +89,16 @@ export default function TokensPage() {
   }, [sort]);
 
   const fetchWalletBalance = async (pubkey: string) => {
+    if (!pubkey || !pubkey.startsWith("klod_")) return;
     try {
       const res = await fetch(`/api/wallet/${pubkey}`);
+      if (!res.ok) return;
       const data = await res.json();
       if (data.success) {
         setWalletBalance(data.wallet.balance);
       }
-    } catch (error) {
-      console.error("Failed to fetch wallet:", error);
+    } catch {
+      // Silently fail - wallet might not exist
     }
   };
 

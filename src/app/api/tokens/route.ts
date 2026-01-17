@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = supabaseAdmin;
     const { searchParams } = new URL(req.url);
 
     const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
