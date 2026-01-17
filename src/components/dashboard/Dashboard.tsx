@@ -35,8 +35,12 @@ export function Dashboard() {
 
       {/* Main Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <BlockFeed />
-        <TransactionFeed />
+        <div className="min-w-0">
+          <BlockFeed />
+        </div>
+        <div className="min-w-0">
+          <TransactionFeed />
+        </div>
       </div>
 
       {/* Validators */}
