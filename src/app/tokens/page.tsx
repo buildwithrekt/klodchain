@@ -111,7 +111,7 @@ export default function TokensPage() {
       });
       if (search) params.append("search", search);
 
-      const res = await fetch(`/api/tokens?${params}`);
+      const res = await fetch(`/api/tokens?${params}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setTokens(data.data);
