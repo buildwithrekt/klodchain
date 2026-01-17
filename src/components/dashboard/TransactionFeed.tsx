@@ -36,13 +36,13 @@ function TransactionCard({ tx }: { tx: Transaction }) {
   return (
     <Link
       href={`/explorer/tx/${tx.signature}`}
-      className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+      className="flex items-center justify-between gap-2 rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
           <Receipt className="h-5 w-5 text-primary" />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-sm">
               {shortenHash(tx.signature, 8)}
             </span>
@@ -59,18 +59,18 @@ function TransactionCard({ tx }: { tx: Transaction }) {
               {tx.status}
             </Badge>
           </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
             <span className="font-mono">{shortenPubkey(tx.from_pubkey, 4)}</span>
             {tx.to_pubkey && (
               <>
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-3 w-3 shrink-0" />
                 <span className="font-mono">{shortenPubkey(tx.to_pubkey, 4)}</span>
               </>
             )}
           </div>
         </div>
       </div>
-      <div className="text-right">
+      <div className="text-right shrink-0">
         {tx.amount && (
           <div className="font-mono text-sm">{formatSol(tx.amount, 4)} KLOD</div>
         )}

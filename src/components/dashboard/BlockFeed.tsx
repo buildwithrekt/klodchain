@@ -33,13 +33,13 @@ function BlockCard({ block }: { block: Block }) {
   return (
     <Link
       href={`/explorer/block/${block.slot}`}
-      className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+      className="flex items-center justify-between gap-2 rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
           <Blocks className="h-5 w-5 text-primary" />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono font-semibold">
               #{block.slot.toLocaleString()}
             </span>
@@ -47,12 +47,12 @@ function BlockCard({ block }: { block: Block }) {
               {block.transaction_count} txs
             </Badge>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground truncate">
             {shortenHash(block.blockhash, 12)}
           </div>
         </div>
       </div>
-      <div className="text-right">
+      <div className="text-right shrink-0">
         <div className="text-xs text-muted-foreground">
           Leader: {shortenPubkey(block.leader_pubkey, 6)}
         </div>
