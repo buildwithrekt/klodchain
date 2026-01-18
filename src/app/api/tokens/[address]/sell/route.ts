@@ -148,6 +148,9 @@ export async function POST(
       );
     }
 
+    // Floor USDK amount for integer storage
+    const usdkOutFloor = Math.floor(usdkOut);
+
     // Update token holding
     const newHoldingAmount = holding.amount - tokenAmountBase;
     if (newHoldingAmount > 0) {
@@ -166,13 +169,13 @@ export async function POST(
         .eq("id", holding.id);
     }
 
-    // Add USDK to wallet balance (wallet holds USDK directly)
+    // Add USDK to wallet balance (wallet holds USDK as integer)
     const { error: updateError } = await supabaseAdmin
       .from("wallets")
       .update({
-        balance: wallet.balance + usdkOut,
+        balance: wallet.balance + usdkOutFloor,
         transaction_count: wallet.transaction_count + 1,
-        total_received: wallet.total_received + usdkOut,
+        total_received: wallet.total_received + usdkOutFloor,
       })
       .eq("pubkey", walletPubkey);
 
@@ -199,7 +202,7 @@ export async function POST(
         circulating_supply: newCirculating,
         price: newPrice,
         market_cap: newMarketCap,
-        volume_24h: (token.volume_24h || 0) + usdkOut,
+        volume_24h: (token.volume_24h || 0) + usdkOutFloor,
       })
       .eq("address", address);
 
@@ -209,7 +212,7 @@ export async function POST(
       memecoin_address: address,
       trader_pubkey: walletPubkey,
       trade_type: "sell",
-      usdk_amount: Math.floor(usdkOut * 1_000_000),
+      usdk_amount: usdkOutFloor * 1_000_000,
       token_amount: tokenAmountBase,
       price_per_token: pricePerToken,
       signature,
@@ -231,14 +234,14 @@ export async function POST(
       transaction_type: "token_sell",
       from_pubkey: walletPubkey,
       to_pubkey: address,
-      amount: Math.floor(usdkOut * 1_000_000), // Store USDK amount in base units
+      amount: usdkOutFloor * 1_000_000, // Store USDK amount in base units
       program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       instruction_data: {
         type: "token_sell",
         memecoin_address: address,
         token_symbol: token.symbol,
         tokens_sold: tokenAmount,
-        usdk_received: usdkOut,
+        usdk_received: usdkOutFloor,
         price_per_token: pricePerToken,
       },
       confirmed_at: new Date().toISOString(),
@@ -249,9 +252,9 @@ export async function POST(
       trade: {
         signature,
         tokensSold: tokenAmount,
-        usdkReceived: usdkOut,
+        usdkReceived: usdkOutFloor,
         pricePerToken,
-        newBalance: wallet.balance + usdkOut,
+        newBalance: wallet.balance + usdkOutFloor,
       },
     });
   } catch (error) {
