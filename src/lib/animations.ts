@@ -95,7 +95,7 @@ export const cardHover = {
     scale: 1.02,
     transition: {
       duration: 0.2,
-      ease: "easeOut",
+      ease: "easeOut" as const,
     },
   },
   tap: { scale: 0.98 },
@@ -109,7 +109,7 @@ export const listItem = {
     x: 0,
     transition: {
       duration: 0.3,
-      ease: "easeOut",
+      ease: "easeOut" as const,
     },
   },
   exit: {
@@ -170,7 +170,7 @@ export const pulse = {
     transition: {
       duration: 2,
       repeat: Infinity,
-      ease: "easeInOut",
+      ease: "easeInOut" as const,
     },
   },
 };
@@ -208,7 +208,7 @@ export const shimmer = {
     transition: {
       duration: 1.5,
       repeat: Infinity,
-      ease: "linear",
+      ease: "linear" as const,
     },
   },
 };
