@@ -28,7 +28,7 @@ Pages:
 
 ## Database Schema
 
-Remplacer `memecoins` par `pumpfun_tokens` :
+Remplacer `memecoins` par `created_tokens` :
 
 ```sql
 -- Drop old simulated tables (optional, backup first)
@@ -36,8 +36,8 @@ Remplacer `memecoins` par `pumpfun_tokens` :
 -- DROP TABLE IF EXISTS memecoin_holdings;
 -- DROP TABLE IF EXISTS memecoins;
 
--- Real Pump.fun tokens created via Klodchain
-CREATE TABLE pumpfun_tokens (
+-- Real tokens created via Klodchain (launched on Pump.fun)
+CREATE TABLE created_tokens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Pump.fun identifiers
@@ -80,9 +80,9 @@ CREATE TABLE pumpfun_tokens (
 );
 
 -- Trade history (for analytics)
-CREATE TABLE pumpfun_trades (
+CREATE TABLE token_trades (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  token_mint TEXT REFERENCES pumpfun_tokens(mint_address) ON DELETE CASCADE,
+  token_mint TEXT REFERENCES created_tokens(mint_address) ON DELETE CASCADE,
   trader_wallet TEXT NOT NULL,
   trade_type TEXT CHECK (trade_type IN ('buy', 'sell')),
   sol_amount DECIMAL NOT NULL,
@@ -93,15 +93,15 @@ CREATE TABLE pumpfun_trades (
 );
 
 -- Indexes
-CREATE INDEX idx_pumpfun_tokens_creator ON pumpfun_tokens(creator_wallet);
-CREATE INDEX idx_pumpfun_tokens_market_cap ON pumpfun_tokens(market_cap_sol DESC);
-CREATE INDEX idx_pumpfun_tokens_created ON pumpfun_tokens(created_at DESC);
-CREATE INDEX idx_pumpfun_trades_token ON pumpfun_trades(token_mint);
-CREATE INDEX idx_pumpfun_trades_trader ON pumpfun_trades(trader_wallet);
+CREATE INDEX idx_created_tokens_creator ON created_tokens(creator_wallet);
+CREATE INDEX idx_created_tokens_market_cap ON created_tokens(market_cap_sol DESC);
+CREATE INDEX idx_created_tokens_created ON created_tokens(created_at DESC);
+CREATE INDEX idx_token_trades_token ON token_trades(token_mint);
+CREATE INDEX idx_token_trades_trader ON token_trades(trader_wallet);
 
 -- Enable realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE pumpfun_tokens;
-ALTER PUBLICATION supabase_realtime ADD TABLE pumpfun_trades;
+ALTER PUBLICATION supabase_realtime ADD TABLE created_tokens;
+ALTER PUBLICATION supabase_realtime ADD TABLE token_trades;
 ```
 
 ---
@@ -304,7 +304,7 @@ export const pumpPortal = new PumpPortalClient();
 - [ ] Test wallet connection
 
 ### Phase 2: Database
-- [ ] Create migration for `pumpfun_tokens` and `pumpfun_trades`
+- [ ] Create migration for `created_tokens` and `token_trades`
 - [ ] Run migration on Supabase
 - [ ] Update TypeScript types
 
@@ -321,7 +321,7 @@ export const pumpPortal = new PumpPortalClient();
 - [ ] Store created token in DB
 
 ### Phase 5: Token List & Detail
-- [ ] Modify `/api/tokens` → fetch from `pumpfun_tokens`
+- [ ] Modify `/api/tokens` → fetch from `created_tokens`
 - [ ] Modify `/app/tokens` list page
 - [ ] Modify `/api/tokens/[address]` → fetch + refresh from Pump.fun API
 - [ ] Modify `/app/token/[address]` detail page
