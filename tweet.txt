@@ -1,0 +1,9 @@
+Klodchain runs smooth on mobile now.
+
+Fixed the card overflow bugs, token images display properly (no more oval logos), navigation moved where it makes sense.
+
+Small things but they add up. 60%+ of crypto users browse on mobile. If the UX feels broken they leave in seconds.
+
+Next: portfolio page + graduation mechanics.
+
+Building in public.

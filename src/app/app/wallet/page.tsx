@@ -643,13 +643,13 @@ export default function WalletPage() {
                         <div className="flex items-center gap-3">
                           <motion.div
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              tx.to_pubkey === walletAddress
+                              tx.transaction_type === "token_sell" || tx.to_pubkey === walletAddress
                                 ? "bg-green-500/20 text-green-400"
                                 : "bg-destructive/20 text-destructive"
                             }`}
                             whileHover={{ scale: 1.1 }}
                           >
-                            {tx.to_pubkey === walletAddress ? (
+                            {tx.transaction_type === "token_sell" || tx.to_pubkey === walletAddress ? (
                               <ArrowDownToLine className="w-4 h-4" />
                             ) : (
                               <Send className="w-4 h-4" />
@@ -670,8 +670,8 @@ export default function WalletPage() {
                             </p>
                           </div>
                         </div>
-                        <p className={tx.to_pubkey === walletAddress ? "text-green-400" : "text-destructive"}>
-                          {tx.to_pubkey === walletAddress ? "+" : "-"}${tx.amount} USDK
+                        <p className={tx.transaction_type === "token_sell" || tx.to_pubkey === walletAddress ? "text-green-400" : "text-destructive"}>
+                          {tx.transaction_type === "token_sell" || tx.to_pubkey === walletAddress ? "+" : "-"}${(tx.amount / 1_000_000).toFixed(2)} USDK
                         </p>
                       </Link>
                     </motion.div>
