@@ -2,39 +2,22 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-export type Theme = "monochrome" | "bubblegum" | "coffee" | "twitter" | "t-three";
 export type ColorMode = "light" | "dark";
 
 interface ThemeContextType {
-  theme: Theme;
   colorMode: ColorMode;
-  setTheme: (theme: Theme) => void;
   setColorMode: (mode: ColorMode) => void;
   toggleColorMode: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const THEMES: { value: Theme; label: string; color: string }[] = [
-  { value: "monochrome", label: "Monochrome", color: "#171717" },
-  { value: "bubblegum", label: "Bubblegum", color: "#d946a8" },
-  { value: "coffee", label: "Coffee", color: "#d97706" },
-  { value: "twitter", label: "Twitter", color: "#1d9bf0" },
-  { value: "t-three", label: "Purple", color: "#a855a7" },
-];
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("monochrome");
   const [colorMode, setColorModeState] = useState<ColorMode>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("klodchain-theme") as Theme | null;
     const savedColorMode = localStorage.getItem("klodchain-color-mode") as ColorMode | null;
-
-    if (savedTheme && THEMES.some(t => t.value === savedTheme)) {
-      setThemeState(savedTheme);
-    }
 
     if (savedColorMode) {
       setColorModeState(savedColorMode);
@@ -50,7 +33,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
 
     const root = document.documentElement;
-    root.setAttribute("data-theme", theme);
 
     if (colorMode === "dark") {
       root.classList.add("dark");
@@ -58,13 +40,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.remove("dark");
     }
 
-    localStorage.setItem("klodchain-theme", theme);
     localStorage.setItem("klodchain-color-mode", colorMode);
-  }, [theme, colorMode, mounted]);
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-  };
+  }, [colorMode, mounted]);
 
   const setColorMode = (mode: ColorMode) => {
     setColorModeState(mode);
@@ -79,7 +56,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, colorMode, setTheme, setColorMode, toggleColorMode }}>
+    <ThemeContext.Provider value={{ colorMode, setColorMode, toggleColorMode }}>
       {children}
     </ThemeContext.Provider>
   );
