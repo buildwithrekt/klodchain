@@ -557,8 +557,8 @@ console.log(data);`}
           <Link href="/stats" className="text-primary hover:underline flex items-center gap-1">
             Stats <ExternalLink className="h-3 w-3" />
           </Link>
-          <Link href="/wallet" className="text-primary hover:underline flex items-center gap-1">
-            Wallet <ExternalLink className="h-3 w-3" />
+          <Link href="/tokens" className="text-primary hover:underline flex items-center gap-1">
+            Tokens <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
       </motion.div>

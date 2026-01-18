@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 
-const KLOD_MINT = "8V5ZKPSMixYnBg4t3RtSU9a1daHAh38Pyhea2R3Xpump";
-const KLOD_DECIMALS = 6;
-
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const wallet = searchParams.get("wallet");
+  const mint = searchParams.get("mint");
 
   if (!wallet) {
     return NextResponse.json(
@@ -16,10 +14,17 @@ export async function GET(request: Request) {
     );
   }
 
+  if (!mint) {
+    return NextResponse.json(
+      { error: "Token mint address required" },
+      { status: 400 }
+    );
+  }
+
   const rpcUrl = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 
   try {
-    // Get all token accounts for this wallet
+    // Get token accounts for this wallet and specific mint
     const response = await fetch(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -29,7 +34,7 @@ export async function GET(request: Request) {
         method: "getTokenAccountsByOwner",
         params: [
           wallet,
-          { mint: KLOD_MINT },
+          { mint: mint },
           { encoding: "jsonParsed" }
         ]
       })
@@ -37,21 +42,32 @@ export async function GET(request: Request) {
 
     const data = await response.json();
 
+    if (data.error) {
+      console.error("RPC error:", data.error);
+      return NextResponse.json(
+        { error: data.error.message || "RPC error" },
+        { status: 500 }
+      );
+    }
+
     let balance = 0;
+    let decimals = 6; // Default for pump.fun tokens
+    let tokenAccount = null;
+
     if (data.result?.value?.length > 0) {
-      const tokenAccount = data.result.value[0];
-      balance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmount || 0;
+      tokenAccount = data.result.value[0];
+      const tokenInfo = tokenAccount.account.data.parsed.info;
+      balance = tokenInfo.tokenAmount.uiAmount || 0;
+      decimals = tokenInfo.tokenAmount.decimals || 6;
     }
 
     return NextResponse.json({
       success: true,
-      balance: {
-        balance: balance,
-        symbol: "KLOD",
-        name: "klodchain",
-        decimals: KLOD_DECIMALS,
-        mint: KLOD_MINT,
-      },
+      balance: balance,
+      decimals: decimals,
+      mint: mint,
+      tokenAccount: tokenAccount?.pubkey || null,
+      rawAmount: tokenAccount?.account.data.parsed.info.tokenAmount.amount || "0",
       source: "solana-mainnet",
     });
   } catch (error) {

@@ -1,5 +1,4 @@
 import {
-  PumpfunTokenInfo,
   CreateTokenMetadata,
   CreateTokenParams,
   TradeParams,
@@ -7,7 +6,7 @@ import {
 } from "./types";
 
 const PUMPPORTAL_API = "https://pumpportal.fun/api";
-const PUMPFUN_API = "https://frontend-api.pump.fun";
+const PUMPFUN_IPFS_API = "https://pump.fun/api";
 
 export class PumpPortalClient {
   /**
@@ -24,7 +23,7 @@ export class PumpPortalClient {
     if (data.website) formData.append("website", data.website);
     formData.append("showName", "true");
 
-    const response = await fetch(`${PUMPPORTAL_API}/ipfs`, {
+    const response = await fetch(`${PUMPFUN_IPFS_API}/ipfs`, {
       method: "POST",
       body: formData,
     });
@@ -68,7 +67,10 @@ export class PumpPortalClient {
       throw new Error(`Create token failed: ${error}`);
     }
 
-    return response.text(); // Base64 encoded transaction
+    // Response is ArrayBuffer, convert to base64
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return base64;
   }
 
   /**
@@ -95,7 +97,10 @@ export class PumpPortalClient {
       throw new Error(`Buy transaction failed: ${error}`);
     }
 
-    return response.text();
+    // Response is ArrayBuffer, convert to base64
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return base64;
   }
 
   /**
@@ -122,37 +127,12 @@ export class PumpPortalClient {
       throw new Error(`Sell transaction failed: ${error}`);
     }
 
-    return response.text();
+    // Response is ArrayBuffer, convert to base64
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return base64;
   }
 
-  /**
-   * Fetch token info from Pump.fun API
-   */
-  async getTokenInfo(mint: string): Promise<PumpfunTokenInfo> {
-    const response = await fetch(`${PUMPFUN_API}/coins/${mint}`);
-
-    if (!response.ok) {
-      throw new Error("Token not found on Pump.fun");
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Fetch multiple tokens (for refreshing stats)
-   */
-  async getTokensInfo(mints: string[]): Promise<PumpfunTokenInfo[]> {
-    const results = await Promise.allSettled(
-      mints.map((mint) => this.getTokenInfo(mint))
-    );
-
-    return results
-      .filter(
-        (r): r is PromiseFulfilledResult<PumpfunTokenInfo> =>
-          r.status === "fulfilled"
-      )
-      .map((r) => r.value);
-  }
 }
 
 // Singleton instance

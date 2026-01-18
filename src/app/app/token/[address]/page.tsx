@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { VersionedTransaction, PublicKey } from "@solana/web3.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,14 +30,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  LineChart,
-  Line,
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 import {
   Coins,
@@ -43,73 +54,187 @@ import {
   ExternalLink,
   TrendingUp,
   TrendingDown,
-  Users,
-  Activity,
   Copy,
   Check,
   Loader2,
+  Wallet,
+  AlertCircle,
 } from "lucide-react";
-import type { Token, TokenTrade } from "@/types";
+import { staggerContainer, staggerItem } from "@/lib/animations";
+import { usePumpPortalWS, PumpPortalTrade } from "@/hooks/usePumpPortalWS";
 
-interface TokenDetails extends Token {
-  holder_count: number;
-  recent_trades: TokenTrade[];
+interface TokenTrade {
+  id: string;
+  token_mint: string;
+  trade_type: "buy" | "sell";
+  sol_amount: number;
+  token_amount: number;
+  trader_wallet: string;
+  signature: string;
+  created_at: string;
 }
 
-interface ChartData {
-  time: string;
-  price: number;
-  timestamp: number;
+interface TokenDetails {
+  id: string;
+  mint_address: string;
+  name: string;
+  symbol: string;
+  description: string | null;
+  image_url: string | null;
+  price_sol: number | null;
+  market_cap_sol: number | null;
+  market_cap_usd: number | null;
+  virtual_sol_reserves: number | null;
+  virtual_token_reserves: number | null;
+  total_supply: number | null;
+  is_graduated: boolean;
+  raydium_pool: string | null;
+  creator_wallet: string;
+  twitter_url: string | null;
+  website_url: string | null;
+  telegram_url: string | null;
+  reply_count: number | null;
+  created_at: string;
+  pumpfun_url: string;
+  recent_trades: TokenTrade[];
 }
 
 export default function TokenDetailPage() {
   const params = useParams();
   const address = params.address as string;
 
+  const { publicKey, signTransaction, connected } = useWallet();
+  const { setVisible } = useWalletModal();
+  const { connection } = useConnection();
+
   const [token, setToken] = useState<TokenDetails | null>(null);
-  const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chartPeriod, setChartPeriod] = useState("24h");
   const [copied, setCopied] = useState(false);
 
   // Trade state
   const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
   const [tradeAmount, setTradeAmount] = useState("");
   const [trading, setTrading] = useState(false);
-  const [walletPubkey, setWalletPubkey] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState(0);
+  const [solBalance, setSolBalance] = useState(0);
   const [tokenBalance, setTokenBalance] = useState(0);
 
-  useEffect(() => {
-    const pubkey = localStorage.getItem("klodchain_wallet");
-    if (pubkey) {
-      setWalletPubkey(pubkey);
-      fetchWalletData(pubkey);
-    }
-  }, []);
+  // Chart state
+  interface ChartDataPoint {
+    timestamp: number;
+    time: string;
+    price: number;
+    volume: number;
+  }
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
+  const [chartInterval, setChartInterval] = useState("5");
 
-  // Fetch token data only once on page load
+  // Real-time trades state
+  const [realtimeTrades, setRealtimeTrades] = useState<PumpPortalTrade[]>([]);
+
+  // Real-time WebSocket connection
+  const handleRealtimeTrade = useCallback((trade: PumpPortalTrade) => {
+    // Update real-time trades list
+    setRealtimeTrades((prev) => [trade, ...prev].slice(0, 20));
+
+    const price = trade.solAmount / trade.tokenAmount;
+
+    // Update token data with new market cap and reserves
+    setToken((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        price_sol: price,
+        market_cap_sol: trade.marketCapSol,
+        virtual_sol_reserves: trade.vSolInBondingCurve,
+        virtual_token_reserves: trade.vTokensInBondingCurve,
+      };
+    });
+
+    // Add new data point to chart
+    setChartData((prev) => {
+      const newPoint: ChartDataPoint = {
+        timestamp: trade.timestamp,
+        time: new Date(trade.timestamp).toISOString(),
+        price,
+        volume: trade.solAmount / 1e9,
+      };
+      return [...prev, newPoint].slice(-200); // Keep last 200 points
+    });
+
+    // Save stats to DB for persistence across refreshes
+    fetch(`/api/tokens/${address}/stats`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        price_sol: price,
+        market_cap_sol: trade.marketCapSol,
+        virtual_sol_reserves: trade.vSolInBondingCurve,
+        virtual_token_reserves: trade.vTokensInBondingCurve,
+      }),
+    }).catch(console.error);
+  }, [address]);
+
+  const { isConnected, lastTrade } = usePumpPortalWS({
+    tokenMint: address,
+    onTrade: handleRealtimeTrade,
+    enabled: !!address,
+  });
+
+  // Fetch SOL and token balances when wallet connected
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!publicKey || !connection) return;
+
+      // Fetch SOL balance
+      const solBal = await connection.getBalance(publicKey);
+      setSolBalance(solBal / 1e9);
+
+      // Fetch token balance using getTokenAccountsByOwner (more reliable)
+      if (address) {
+        try {
+          const mintPubkey = new PublicKey(address);
+          const tokenAccounts = await connection.getTokenAccountsByOwner(
+            publicKey,
+            { mint: mintPubkey },
+            "confirmed"
+          );
+
+          if (tokenAccounts.value.length > 0) {
+            // Sum all token accounts for this mint (usually just 1)
+            let totalBalance = 0;
+            for (const account of tokenAccounts.value) {
+              const accountInfo = await connection.getTokenAccountBalance(account.pubkey);
+              totalBalance += accountInfo.value.uiAmount || 0;
+            }
+            setTokenBalance(totalBalance);
+          } else {
+            setTokenBalance(0);
+          }
+        } catch (error) {
+          console.error("Failed to fetch token balance:", error);
+          setTokenBalance(0);
+        }
+      }
+    };
+
+    fetchBalances();
+  }, [publicKey, connection, address]);
+
+  // Fetch token metadata and poll for updates
   useEffect(() => {
     if (address) {
-      fetchToken();
+      fetchToken(true); // Initial fetch with loading
+
+      // Poll token data every 10 seconds (silent refresh)
+      const interval = setInterval(() => fetchToken(false), 10000);
+      return () => clearInterval(interval);
     }
   }, [address]);
 
-  // Fetch chart data when period changes
-  useEffect(() => {
-    if (address) {
-      fetchChart();
-    }
-  }, [address, chartPeriod]);
-
-  useEffect(() => {
-    if (walletPubkey && token) {
-      fetchTokenHolding();
-    }
-  }, [walletPubkey, token]);
-
-  const fetchToken = async () => {
+  const fetchToken = async (showLoading = false) => {
     try {
+      if (showLoading) setLoading(true);
       const res = await fetch(`/api/tokens/${address}`);
       const data = await res.json();
       if (data.success) {
@@ -118,52 +243,40 @@ export default function TokenDetailPage() {
     } catch (error) {
       console.error("Failed to fetch token:", error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
-  const fetchChart = async () => {
+  // Fetch chart data
+  const fetchChartData = async () => {
     try {
-      const res = await fetch(`/api/tokens/${address}/chart?period=${chartPeriod}`);
+      const res = await fetch(`/api/tokens/${address}/chart?interval=${chartInterval}`);
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.data) {
         setChartData(data.data);
       }
     } catch (error) {
-      console.error("Failed to fetch chart:", error);
+      console.error("Failed to fetch chart data:", error);
+    } finally {
+      setChartLoading(false);
     }
   };
 
-  const fetchWalletData = async (pubkey: string) => {
-    try {
-      const res = await fetch(`/api/wallet/${pubkey}`);
-      const data = await res.json();
-      if (data.success) {
-        setWalletBalance(data.wallet.balance);
-      }
-    } catch (error) {
-      console.error("Failed to fetch wallet:", error);
-    }
-  };
+  // Fetch chart data on mount and interval change
+  useEffect(() => {
+    if (address) {
+      setChartLoading(true);
+      fetchChartData();
 
-  const fetchTokenHolding = async () => {
-    try {
-      const res = await fetch(`/api/tokens/${address}/holders?limit=1000`);
-      const data = await res.json();
-      if (data.success) {
-        const myHolding = data.data.find(
-          (h: any) => h.wallet_pubkey === walletPubkey
-        );
-        setTokenBalance(myHolding?.amount || 0);
-      }
-    } catch (error) {
-      console.error("Failed to fetch holding:", error);
+      // Poll chart data every 30 seconds
+      const interval = setInterval(fetchChartData, 30000);
+      return () => clearInterval(interval);
     }
-  };
+  }, [address, chartInterval]);
 
   const handleTrade = async () => {
-    if (!walletPubkey) {
-      toast.error("Please connect your wallet");
+    if (!connected || !publicKey || !signTransaction) {
+      setVisible(true);
       return;
     }
 
@@ -175,13 +288,16 @@ export default function TokenDetailPage() {
 
     setTrading(true);
     try {
+      // 1. Get unsigned transaction from API
       const endpoint = tradeType === "buy"
         ? `/api/tokens/${address}/buy`
         : `/api/tokens/${address}/sell`;
 
       const body = tradeType === "buy"
-        ? { walletPubkey, usdkAmount: amount }
-        : { walletPubkey, tokenAmount: amount };
+        ? { walletPubkey: publicKey.toBase58(), solAmount: amount }
+        : { walletPubkey: publicKey.toBase58(), tokenAmount: amount };
+
+      toast.info("Preparing transaction...");
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -191,25 +307,62 @@ export default function TokenDetailPage() {
 
       const data = await res.json();
 
-      if (data.success) {
-        toast.success(
-          tradeType === "buy"
-            ? `Bought ${data.trade.tokensReceived.toFixed(2)} ${token?.symbol}`
-            : `Sold ${amount} ${token?.symbol} for $${data.trade.usdkReceived.toFixed(2)} USDK`
-        );
-        setTradeAmount("");
-        fetchToken();
-        fetchChart();
-        if (walletPubkey) {
-          fetchWalletData(walletPubkey);
-          fetchTokenHolding();
-        }
-      } else {
-        toast.error(data.error || "Trade failed");
+      if (!data.success) {
+        throw new Error(data.error || "Failed to prepare transaction");
       }
-    } catch (error) {
+
+      // 2. Deserialize and sign transaction
+      toast.info("Please sign the transaction in your wallet...");
+
+      const txBuffer = Buffer.from(data.transaction, "base64");
+      const transaction = VersionedTransaction.deserialize(txBuffer);
+      const signedTx = await signTransaction(transaction);
+
+      // 3. Send to Solana
+      toast.info("Sending transaction to Solana...");
+
+      const signature = await connection.sendRawTransaction(
+        signedTx.serialize(),
+        { skipPreflight: true }
+      );
+
+      toast.info(`Transaction sent: ${signature.slice(0, 8)}...`);
+
+      // 4. Wait for confirmation
+      const confirmation = await connection.confirmTransaction(signature, "confirmed");
+
+      if (confirmation.value.err) {
+        throw new Error("Transaction failed on chain");
+      }
+
+      toast.success(
+        tradeType === "buy"
+          ? `Successfully bought ${token?.symbol}!`
+          : `Successfully sold ${token?.symbol}!`,
+        {
+          description: (
+            <a
+              href={`https://solscan.io/tx/${signature}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              View on Solscan
+            </a>
+          ),
+        }
+      );
+
+      setTradeAmount("");
+      fetchToken();
+
+      // Refresh SOL balance
+      const balance = await connection.getBalance(publicKey);
+      setSolBalance(balance / 1e9);
+    } catch (error: unknown) {
       console.error("Trade error:", error);
-      toast.error("Trade failed");
+      const errorMessage = error instanceof Error ? error.message : "Trade failed";
+      toast.error(errorMessage);
     } finally {
       setTrading(false);
     }
@@ -221,8 +374,8 @@ export default function TokenDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formatPrice = (price: number) => {
-    if (price === 0) return "0";
+  const formatPrice = (price: number | null) => {
+    if (!price || price === 0) return "0";
     if (price < 0.000001) return price.toFixed(9);
     if (price < 0.0001) return price.toFixed(8);
     if (price < 0.01) return price.toFixed(6);
@@ -230,7 +383,8 @@ export default function TokenDetailPage() {
     return price.toFixed(2);
   };
 
-  const formatNumber = (n: number) => {
+  const formatNumber = (n: number | null) => {
+    if (!n) return "0";
     if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
@@ -247,8 +401,8 @@ export default function TokenDetailPage() {
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-32" />
             <Skeleton className="h-64" />
-            <Skeleton className="h-96" />
           </div>
           <Skeleton className="h-96" />
         </div>
@@ -269,30 +423,37 @@ export default function TokenDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <motion.div
+      className="max-w-7xl mx-auto px-4 py-6 space-y-6"
+      initial="initial"
+      animate="animate"
+      variants={staggerContainer}
+    >
       {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/">Home</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/tokens">Tokens</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>${token.symbol}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <motion.div variants={staggerItem}>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/app">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/app/tokens">Tokens</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>${token.symbol}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </motion.div>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start gap-4">
+      <motion.div variants={staggerItem} className="flex flex-col sm:flex-row items-start gap-4">
         <div className="flex items-center gap-4">
           {token.image_url ? (
             <div className="h-16 w-16 rounded-full overflow-hidden flex-shrink-0">
@@ -307,13 +468,19 @@ export default function TokenDetailPage() {
             </div>
           ) : (
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-2xl font-bold text-primary">
-                {token.symbol.charAt(0)}
-              </span>
+              <Coins className="h-8 w-8 text-primary" />
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold">{token.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{token.name}</h1>
+              {token.is_graduated && (
+                <Badge variant="default" className="bg-green-500">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  DEX
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">${token.symbol}</span>
               <button
@@ -327,8 +494,8 @@ export default function TokenDetailPage() {
           </div>
         </div>
 
-        {/* Social Links */}
-        <div className="flex items-center gap-2 sm:ml-auto">
+        {/* Social & External Links */}
+        <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
           {token.twitter_url && (
             <a href={token.twitter_url} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="icon">
@@ -350,154 +517,179 @@ export default function TokenDetailPage() {
               </Button>
             </a>
           )}
-          <Link href={`/explorer/tx?search=${address}`}>
+          <a
+            href={token.pumpfun_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <Button variant="outline" size="sm" className="gap-2">
               <ExternalLink className="h-4 w-4" />
-              Explorer
+              Pump.fun
             </Button>
-          </Link>
+          </a>
+          <a
+            href={`https://solscan.io/token/${address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="sm" className="gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Solscan
+            </Button>
+          </a>
         </div>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Chart & Info */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Stats */}
+        {/* Left Column - Stats & Info */}
+        <motion.div variants={staggerItem} className="lg:col-span-2 space-y-6">
+          {/* Stats Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Card>
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Price</p>
-                <p className="text-xl font-bold">${formatPrice(token.price)}</p>
-                <p className="text-xs text-muted-foreground">USDK</p>
+                <p className="text-xl font-bold font-mono">
+                  {token.price_sol && token.price_sol > 0
+                    ? formatPrice(token.price_sol)
+                    : lastTrade
+                    ? formatPrice(lastTrade.solAmount / lastTrade.tokenAmount)
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">SOL</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Market Cap</p>
-                <p className="text-xl font-bold">${formatNumber(token.market_cap)}</p>
-                <p className="text-xs text-muted-foreground">USDK</p>
+                <p className="text-xl font-bold font-mono">
+                  {token.market_cap_sol && token.market_cap_sol > 0
+                    ? formatNumber(token.market_cap_sol)
+                    : lastTrade?.marketCapSol
+                    ? formatNumber(lastTrade.marketCapSol)
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">SOL</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <p className="text-sm text-muted-foreground">Volume 24h</p>
-                <p className="text-xl font-bold">${formatNumber(token.volume_24h)}</p>
-                <p className="text-xs text-muted-foreground">USDK</p>
+                <p className="text-sm text-muted-foreground">MCap USD</p>
+                <p className="text-xl font-bold font-mono">
+                  ${formatNumber(token.market_cap_usd)}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <p className="text-sm text-muted-foreground">Holders</p>
-                <p className="text-xl font-bold">{token.holder_count}</p>
-                <p className="text-xs text-muted-foreground">wallets</p>
+                <p className="text-sm text-muted-foreground">Replies</p>
+                <p className="text-xl font-bold">
+                  {token.reply_count || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">on Klodchain</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Virtual Bonding Curve Pool */}
-          <Card className="border-primary/30">
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold">Bonding Curve (Virtual Pool)</p>
+          {/* Price Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">x * y = k</Badge>
-                  {(token as any).is_graduated && (
-                    <Badge variant="default" className="bg-green-500">Graduated</Badge>
+                  <CardTitle className="text-lg">Price Chart</CardTitle>
+                  {isConnected && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="text-xs text-green-500 font-medium">LIVE</span>
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">USDK Reserve</p>
-                  <p className="text-lg font-bold font-mono">
-                    ${formatNumber(Number((token as any).virtual_usdk_reserve) || 4000)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">{token.symbol} Reserve</p>
-                  <p className="text-lg font-bold font-mono">
-                    {formatNumber((Number((token as any).virtual_token_reserve) || 1000000000000000) / 1_000_000)}
-                  </p>
-                </div>
-              </div>
-              {/* Progress to graduation */}
-              <div className="mt-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">Progress to graduation</span>
-                  <span className="font-mono">
-                    ${formatNumber(token.market_cap)} / $69K
-                  </span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${Math.min((token.market_cap / 69000) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Chart */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Price Chart</CardTitle>
-                <div className="flex gap-1 flex-wrap">
-                  {["1m", "5m", "15m", "1h", "24h", "7d", "30d"].map((p) => (
-                    <Button
-                      key={p}
-                      variant={chartPeriod === p ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => setChartPeriod(p)}
-                    >
-                      {p}
-                    </Button>
-                  ))}
-                </div>
+                <Select value={chartInterval} onValueChange={setChartInterval}>
+                  <SelectTrigger className="w-24 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1m</SelectItem>
+                    <SelectItem value="5">5m</SelectItem>
+                    <SelectItem value="15">15m</SelectItem>
+                    <SelectItem value="60">1h</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
-                {chartData.length > 0 ? (
+              {chartLoading ? (
+                <div className="h-[250px] flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : chartData.length === 0 ? (
+                <div className="h-[250px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                  <p>Waiting for trades...</p>
+                  <p className="text-xs">Chart will update in real-time</p>
+                </div>
+              ) : (
+                <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
+                    <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
                       <XAxis
                         dataKey="time"
-                        tickFormatter={(t) => new Date(t).toLocaleTimeString()}
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        }}
+                        tick={{ fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        minTickGap={50}
                       />
                       <YAxis
-                        tickFormatter={(v) => formatPrice(v)}
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
-                        width={80}
+                        domain={["dataMin", "dataMax"]}
+                        tickFormatter={(value) => formatPrice(value)}
+                        tick={{ fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={60}
                       />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-background border rounded-lg p-2 shadow-lg">
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(data.time).toLocaleString()}
+                                </p>
+                                <p className="font-mono font-bold">
+                                  {formatPrice(data.price)} SOL
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Vol: {data.volume.toFixed(4)} SOL
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
                         }}
-                        formatter={(value: number) => [formatPrice(value), "Price"]}
-                        labelFormatter={(label) => new Date(label).toLocaleString()}
                       />
-                      <Line
+                      <Area
                         type="monotone"
                         dataKey="price"
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
-                        dot={false}
+                        fill="url(#colorPrice)"
                       />
-                    </LineChart>
+                    </AreaChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    No trading data yet
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -511,27 +703,67 @@ export default function TokenDetailPage() {
             <TabsContent value="trades">
               <Card>
                 <CardContent className="pt-6">
-                  {token.recent_trades.length === 0 ? (
+                  {realtimeTrades.length === 0 && token.recent_trades.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
-                      No trades yet. Be the first to trade!
+                      No trades recorded yet
                     </p>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Type</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Price</TableHead>
+                          <TableHead>SOL</TableHead>
+                          <TableHead>Tokens</TableHead>
                           <TableHead>Trader</TableHead>
                           <TableHead>Time</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
+                        {/* Real-time trades first */}
+                        {realtimeTrades.map((trade) => (
+                          <TableRow key={trade.signature} className="bg-primary/5">
+                            <TableCell>
+                              <Badge
+                                variant={trade.txType === "buy" ? "default" : "destructive"}
+                                className={trade.txType === "buy" ? "bg-green-500" : ""}
+                              >
+                                {trade.txType === "buy" ? (
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                ) : (
+                                  <TrendingDown className="h-3 w-3 mr-1" />
+                                )}
+                                {trade.txType.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {formatNumber(trade.solAmount / 1e9)} SOL
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {formatNumber(trade.tokenAmount / 1e6)}
+                            </TableCell>
+                            <TableCell>
+                              <a
+                                href={`https://solscan.io/account/${trade.traderPublicKey}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline font-mono text-sm"
+                              >
+                                {shortenAddress(trade.traderPublicKey)}
+                              </a>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              <span className="text-green-500 text-xs">LIVE</span>{" "}
+                              {new Date(trade.timestamp).toLocaleTimeString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {/* Historical trades */}
                         {token.recent_trades.map((trade) => (
                           <TableRow key={trade.id}>
                             <TableCell>
                               <Badge
-                                variant={trade.trade_type === "buy" ? "success" : "destructive"}
+                                variant={trade.trade_type === "buy" ? "default" : "destructive"}
+                                className={trade.trade_type === "buy" ? "bg-green-500" : ""}
                               >
                                 {trade.trade_type === "buy" ? (
                                   <TrendingUp className="h-3 w-3 mr-1" />
@@ -542,18 +774,20 @@ export default function TokenDetailPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="font-mono">
-                              {formatNumber(trade.token_amount / 1_000_000)} {token.symbol}
+                              {formatNumber(trade.sol_amount / 1e9)} SOL
                             </TableCell>
                             <TableCell className="font-mono">
-                              {formatPrice(trade.price_per_token)}
+                              {formatNumber(trade.token_amount / 1e6)}
                             </TableCell>
                             <TableCell>
-                              <Link
-                                href={`/accounts/${trade.trader_pubkey}`}
+                              <a
+                                href={`https://solscan.io/account/${trade.trader_wallet}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-primary hover:underline font-mono text-sm"
                               >
-                                {shortenAddress(trade.trader_pubkey)}
-                              </Link>
+                                {shortenAddress(trade.trader_wallet)}
+                              </a>
                             </TableCell>
                             <TableCell className="text-muted-foreground">
                               {new Date(trade.created_at).toLocaleString()}
@@ -579,41 +813,48 @@ export default function TokenDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Supply</p>
-                      <p className="font-mono">{formatNumber(token.total_supply / 1_000_000)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Circulating Supply</p>
-                      <p className="font-mono">{formatNumber(token.circulating_supply / 1_000_000)}</p>
+                      <p className="font-mono">
+                        {formatNumber(token.total_supply ? token.total_supply / 1e6 : 1_000_000_000)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Creator</p>
-                      <Link
-                        href={`/accounts/${token.creator_pubkey}`}
+                      <a
+                        href={`https://solscan.io/account/${token.creator_wallet}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-primary hover:underline font-mono text-sm"
                       >
-                        {shortenAddress(token.creator_pubkey)}
-                      </Link>
+                        {shortenAddress(token.creator_wallet)}
+                      </a>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Created</p>
                       <p>{new Date(token.created_at).toLocaleDateString()}</p>
                     </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Status</p>
+                      <p>{token.is_graduated ? "Listed on Raydium DEX" : "On Bonding Curve"}</p>
+                    </div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Contract Address</p>
+                    <p className="text-sm text-muted-foreground mb-1">Mint Address</p>
                     <p className="font-mono text-sm break-all">{address}</p>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
-        </div>
+        </motion.div>
 
         {/* Right Column - Trade Panel */}
-        <div className="space-y-6">
+        <motion.div variants={staggerItem} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Trade {token.symbol}</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Coins className="h-5 w-5" />
+                Trade {token.symbol}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Trade Type Toggle */}
@@ -634,17 +875,42 @@ export default function TokenDetailPage() {
                 </Button>
               </div>
 
-              {/* Balance Display */}
-              {walletPubkey && (
-                <div className="p-3 rounded-lg bg-muted/50 space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">USDK Balance</span>
-                    <span className="font-mono">${walletBalance.toFixed(2)}</span>
+              {/* Wallet Warning */}
+              {!connected && (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-yellow-500" />
+                    <span>Connect wallet to trade</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{token.symbol} Balance</span>
-                    <span className="font-mono">{tokenBalance.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
-                  </div>
+                </div>
+              )}
+
+              {/* Balance */}
+              {connected && (
+                <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                  {tradeType === "buy" ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">SOL Balance</span>
+                      <button
+                        type="button"
+                        onClick={() => setTradeAmount(Math.max(0, solBalance - 0.01).toFixed(4))}
+                        className="font-mono hover:text-primary transition-colors"
+                      >
+                        {solBalance.toFixed(4)} SOL
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Token Balance</span>
+                      <button
+                        type="button"
+                        onClick={() => setTradeAmount(tokenBalance.toLocaleString())}
+                        className="font-mono hover:text-primary transition-colors"
+                      >
+                        {tokenBalance.toLocaleString()} {token?.symbol}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -652,21 +918,17 @@ export default function TokenDetailPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <label className="text-sm">
-                    {tradeType === "buy" ? "USDK Amount" : `${token.symbol} Amount`}
+                    {tradeType === "buy" ? "SOL Amount" : `${token.symbol} Amount`}
                   </label>
-                  <button
-                    type="button"
-                    className="text-xs text-primary hover:underline"
-                    onClick={() => {
-                      if (tradeType === "buy") {
-                        setTradeAmount(walletBalance.toString());
-                      } else {
-                        setTradeAmount(tokenBalance.toString());
-                      }
-                    }}
-                  >
-                    Max
-                  </button>
+                  {connected && tradeType === "buy" && (
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline"
+                      onClick={() => setTradeAmount(Math.max(0, solBalance - 0.01).toFixed(4))}
+                    >
+                      Max
+                    </button>
+                  )}
                 </div>
                 <Input
                   type="number"
@@ -674,26 +936,27 @@ export default function TokenDetailPage() {
                   value={tradeAmount}
                   onChange={(e) => setTradeAmount(e.target.value)}
                   min="0"
-                  step="0.01"
+                  step="0.001"
+                  disabled={trading}
                 />
               </div>
 
               {/* Estimated Output */}
-              {tradeAmount && parseFloat(tradeAmount) > 0 && (
+              {tradeAmount && parseFloat(tradeAmount) > 0 && token.price_sol && (
                 <div className="p-3 rounded-lg border">
                   <p className="text-sm text-muted-foreground">
-                    You will receive approx.
+                    Estimated output (before slippage)
                   </p>
-                  <p className="text-lg font-bold">
+                  <p className="text-lg font-bold font-mono">
                     {tradeType === "buy"
-                      ? `${formatNumber(parseFloat(tradeAmount) / token.price)} ${token.symbol}`
-                      : `$${formatPrice(parseFloat(tradeAmount) * token.price)} USDK`}
+                      ? `~${formatNumber(parseFloat(tradeAmount) / token.price_sol)} ${token.symbol}`
+                      : `~${formatPrice(parseFloat(tradeAmount) * token.price_sol)} SOL`}
                   </p>
                 </div>
               )}
 
               {/* Trade Button */}
-              {walletPubkey ? (
+              {connected ? (
                 <Button
                   onClick={handleTrade}
                   disabled={trading || !tradeAmount || parseFloat(tradeAmount) <= 0}
@@ -712,20 +975,37 @@ export default function TokenDetailPage() {
                   )}
                 </Button>
               ) : (
-                <Link href="/wallet" className="block">
-                  <Button className="w-full">Connect Wallet</Button>
-                </Link>
+                <Button onClick={() => setVisible(true)} className="w-full">
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Connect Wallet
+                </Button>
               )}
 
               {/* Price Info */}
-              <div className="text-center text-sm text-muted-foreground">
-                <p>Current Price: ${formatPrice(token.price)} USDK</p>
-                <p className="text-xs mt-1">Virtual bonding curve (pump.fun style)</p>
+              <div className="text-center text-sm text-muted-foreground space-y-1">
+                <p>Price: {formatPrice(token.price_sol)} SOL</p>
+                <p className="text-xs">5% max slippage</p>
               </div>
             </CardContent>
           </Card>
-        </div>
+
+          {/* Warning Card */}
+          <Card className="border-orange-500/30 bg-orange-500/5">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3 text-sm">
+                <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5" />
+                <div>
+                  <p className="font-medium text-orange-500">Real SOL Transaction</p>
+                  <p className="text-muted-foreground">
+                    Trades execute on Solana mainnet via Pump.fun.
+                    Make sure you understand the risks.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

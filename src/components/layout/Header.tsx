@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/drawer";
 import { TpsCounter } from "@/components/dashboard/TpsCounter";
 import { ThemeSelector } from "@/components/layout/ThemeSelector";
+import { WalletButton } from "@/components/wallet/WalletButton";
 import {
   Menu,
   Search,
@@ -29,7 +30,6 @@ const NAV_LINKS = [
   { href: "/explorer", label: "Explorer", icon: Search },
   { href: "/tokens", label: "Tokens", icon: Wallet },
   { href: "/stats", label: "Stats", icon: BarChart3 },
-  { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/deploy", label: "Deploy Agent", icon: Bot },
   { href: "/documentation", label: "API", icon: Code },
@@ -61,6 +61,7 @@ export function Header() {
         {/* Navigation */}
         <div className="flex items-center gap-2">
           <TpsCounter />
+          <WalletButton />
           <ThemeSelector />
           <Drawer open={open} onOpenChange={setOpen} direction="right">
             <DrawerTrigger asChild>

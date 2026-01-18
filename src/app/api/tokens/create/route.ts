@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { Keypair } from "@solana/web3.js";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { pumpPortal } from "@/lib/pumpportal";
-import bs58 from "bs58";
 
 export const dynamic = "force-dynamic";
+
+// Get a vanity keypair from the reserve
+async function getVanityKeypair(): Promise<{ publicKey: string; secretKey: string } | null> {
+  // Use the SQL function to atomically get and reserve a keypair
+  const { data, error } = await supabaseAdmin.rpc("get_next_vanity_keypair", {
+    target_suffix: "klod",
+  });
+
+  if (error || !data || data.length === 0) {
+    console.log("No vanity keypairs available in reserve");
+    return null;
+  }
+
+  return {
+    publicKey: data[0].public_key,
+    secretKey: data[0].secret_key,
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +35,7 @@ export async function POST(req: NextRequest) {
     const telegramUrl = formData.get("telegram_url") as string | null;
     const creatorWallet = formData.get("creator_wallet") as string;
     const image = formData.get("image") as File | null;
+    const initialBuySol = parseFloat(formData.get("initial_buy_sol") as string) || 0;
 
     // Validate required fields
     if (!name || name.length < 1 || name.length > 32) {
@@ -48,6 +66,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Try to get a vanity keypair from reserve, fallback to random
+    let mintPubkey: string;
+    let mintSecretKey: string | null = null;
+
+    const vanityKeypair = await getVanityKeypair();
+    if (vanityKeypair) {
+      mintPubkey = vanityKeypair.publicKey;
+      mintSecretKey = vanityKeypair.secretKey;
+      console.log(`Using vanity keypair: ${mintPubkey}`);
+    } else {
+      // Fallback to random keypair (client will generate)
+      const randomKeypair = Keypair.generate();
+      mintPubkey = randomKeypair.publicKey.toBase58();
+      mintSecretKey = Buffer.from(randomKeypair.secretKey).toString("base64");
+      console.log(`Using random keypair: ${mintPubkey}`);
+    }
+
     // 1. Upload metadata to IPFS via PumpPortal
     let metadataUri: string;
     try {
@@ -68,10 +103,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Generate mint keypair
-    const mintKeypair = Keypair.generate();
-    const mintPubkey = mintKeypair.publicKey.toBase58();
-
     // 3. Get create transaction from PumpPortal
     let transaction: string;
     try {
@@ -81,7 +112,7 @@ export async function POST(req: NextRequest) {
         symbol: symbol.toUpperCase(),
         metadataUri,
         mintPubkey,
-        initialBuySOL: 0,
+        initialBuySOL: initialBuySol,
       });
     } catch (error) {
       console.error("PumpPortal error:", error);
@@ -118,12 +149,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Link vanity keypair to token (if using one from reserve)
+    if (vanityKeypair) {
+      await supabaseAdmin
+        .from("vanity_keypairs")
+        .update({ used_by_token: mintPubkey })
+        .eq("public_key", mintPubkey);
+    }
+
     // 5. Return transaction for client to sign
+    // Include mint keypair so client can sign with it
     return NextResponse.json({
       success: true,
-      transaction, // Base64 encoded, client must sign
+      transaction, // Base64 encoded, client must sign with wallet + mint keypair
       mint: mintPubkey,
-      mintSecretKey: bs58.encode(mintKeypair.secretKey), // Client needs this to co-sign
+      mintSecretKey, // Base64 encoded, client needs this to sign
     });
   } catch (error) {
     console.error("Token creation error:", error);

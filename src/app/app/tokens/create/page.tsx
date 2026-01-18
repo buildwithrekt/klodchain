@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { Keypair, VersionedTransaction } from "@solana/web3.js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +31,8 @@ import {
   MessageCircle,
   Loader2,
   AlertCircle,
+  Wallet,
+  Sparkles,
 } from "lucide-react";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 
@@ -35,9 +40,12 @@ export default function CreateTokenPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [walletPubkey, setWalletPubkey] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const { publicKey, signTransaction, connected } = useWallet();
+  const { setVisible } = useWalletModal();
+  const { connection } = useConnection();
+
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<"form" | "uploading" | "signing" | "confirming">("form");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
@@ -48,27 +56,8 @@ export default function CreateTokenPage() {
     twitter_url: "",
     website_url: "",
     telegram_url: "",
+    initial_buy_sol: "0.01", // Default dev buy
   });
-
-  useEffect(() => {
-    const pubkey = localStorage.getItem("klodchain_wallet");
-    if (pubkey) {
-      setWalletPubkey(pubkey);
-      fetchWalletBalance(pubkey);
-    }
-  }, []);
-
-  const fetchWalletBalance = async (pubkey: string) => {
-    try {
-      const res = await fetch(`/api/wallet/${pubkey}`);
-      const data = await res.json();
-      if (data.success) {
-        setWalletBalance(data.wallet.balance);
-      }
-    } catch (error) {
-      console.error("Failed to fetch wallet:", error);
-    }
-  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,14 +86,8 @@ export default function CreateTokenPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!walletPubkey) {
-      toast.error("Please connect your wallet first");
-      router.push("/wallet");
-      return;
-    }
-
-    if (walletBalance < 1) {
-      toast.error("Insufficient balance. Token creation costs 1 KLOD");
+    if (!connected || !publicKey || !signTransaction) {
+      setVisible(true);
       return;
     }
 
@@ -113,8 +96,19 @@ export default function CreateTokenPage() {
       return;
     }
 
+    if (!imageFile) {
+      toast.error("Token image is required");
+      return;
+    }
+
     setLoading(true);
+    setStep("form");
+
     try {
+      // 1. Upload metadata and get transaction + mint keypair from API
+      setStep("uploading");
+      toast.info("Uploading metadata to IPFS...");
+
       const submitData = new FormData();
       submitData.append("name", formData.name);
       submitData.append("symbol", formData.symbol);
@@ -122,10 +116,9 @@ export default function CreateTokenPage() {
       submitData.append("twitter_url", formData.twitter_url);
       submitData.append("website_url", formData.website_url);
       submitData.append("telegram_url", formData.telegram_url);
-      submitData.append("creator_pubkey", walletPubkey);
-      if (imageFile) {
-        submitData.append("image", imageFile);
-      }
+      submitData.append("creator_wallet", publicKey.toBase58());
+      submitData.append("image", imageFile);
+      submitData.append("initial_buy_sol", formData.initial_buy_sol);
 
       const res = await fetch("/api/tokens/create", {
         method: "POST",
@@ -134,17 +127,66 @@ export default function CreateTokenPage() {
 
       const data = await res.json();
 
-      if (data.success) {
-        toast.success(`${formData.name} created successfully!`);
-        router.push(`/token/${data.token.address}`);
-      } else {
-        toast.error(data.error || "Failed to create token");
+      if (!data.success) {
+        throw new Error(data.error || "Failed to create token");
       }
-    } catch (error) {
+
+      const { transaction: txBase64, mint, mintSecretKey } = data;
+
+      // 2. Reconstruct mint keypair from server response
+      const mintSecretKeyBytes = Buffer.from(mintSecretKey, "base64");
+      const mintKeypair = Keypair.fromSecretKey(mintSecretKeyBytes);
+
+      // 3. Deserialize transaction
+      setStep("signing");
+      toast.info("Please sign the transaction in your wallet...");
+
+      const txBuffer = Buffer.from(txBase64, "base64");
+      const transaction = VersionedTransaction.deserialize(txBuffer);
+
+      // 4. Sign with mint keypair (required by Pump.fun)
+      transaction.sign([mintKeypair]);
+
+      // 5. Sign with user wallet
+      const signedTx = await signTransaction(transaction);
+
+      // 6. Send transaction to Solana
+      setStep("confirming");
+      toast.info("Sending transaction to Solana...");
+
+      const signature = await connection.sendRawTransaction(
+        signedTx.serialize(),
+        { skipPreflight: true }
+      );
+
+      toast.info(`Transaction sent: ${signature.slice(0, 8)}...`);
+
+      // 7. Wait for confirmation
+      const confirmation = await connection.confirmTransaction(signature, "confirmed");
+
+      if (confirmation.value.err) {
+        throw new Error("Transaction failed on chain");
+      }
+
+      // 8. Confirm with our backend
+      await fetch(`/api/tokens/${mint}/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signature }),
+      });
+
+      toast.success(`${formData.name} created successfully!`, {
+        description: `Address: ...${mint.slice(-8)}`,
+      });
+
+      router.push(`/app/token/${mint}`);
+    } catch (error: unknown) {
       console.error("Create token error:", error);
-      toast.error("Failed to create token");
+      const errorMessage = error instanceof Error ? error.message : "Failed to create token";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+      setStep("form");
     }
   };
 
@@ -161,13 +203,13 @@ export default function CreateTokenPage() {
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <Link href="/">Home</Link>
+                <Link href="/app">Home</Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <Link href="/tokens">Tokens</Link>
+                <Link href="/app/tokens">Tokens</Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
@@ -187,54 +229,54 @@ export default function CreateTokenPage() {
           <Coins className="h-6 w-6 text-primary" />
         </motion.div>
         <div>
-          <h1 className="text-2xl font-bold">Create Token</h1>
+          <h1 className="text-2xl font-bold">Launch Token on Klodchain</h1>
           <p className="text-muted-foreground text-sm">
-            Launch your memecoin on klodchain
+            Create a real memecoin on Solana mainnet
           </p>
         </div>
       </motion.div>
 
       {/* Wallet Warning */}
-      {!walletPubkey && (
+      {!connected && (
         <motion.div variants={staggerItem}>
           <Card className="border-yellow-500/50 bg-yellow-500/10">
             <CardContent className="py-4">
               <div className="flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-yellow-500" />
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">Wallet not connected</p>
                   <p className="text-sm text-muted-foreground">
-                    Please{" "}
-                    <Link href="/wallet" className="text-primary hover:underline">
-                      connect your wallet
-                    </Link>{" "}
-                    to create a token.
+                    Connect your Solana wallet to create a token.
                   </p>
                 </div>
+                <Button onClick={() => setVisible(true)} variant="outline" size="sm">
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Connect
+                </Button>
               </div>
             </CardContent>
           </Card>
         </motion.div>
       )}
 
-      {/* Creation Cost */}
+      {/* Info Card */}
       <motion.div variants={staggerItem}>
-        <Card>
+        <Card className="border-primary/20 bg-primary/5">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Creation Cost</p>
+                <p className="font-medium">Real token on Klodchain</p>
                 <p className="text-sm text-muted-foreground">
-                  1 billion tokens supply, bonding curve pricing
+                  1 billion supply, bonding curve pricing, tradeable on any bots
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold">1 KLOD</p>
-                {walletPubkey && (
-                  <p className="text-sm text-muted-foreground">
-                    Balance: {walletBalance} KLOD
-                  </p>
-                )}
+                <p className="text-lg font-bold">
+                  ~{(0.02 + parseFloat(formData.initial_buy_sol || "0")).toFixed(3)} SOL
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Fee + Initial Buy
+                </p>
               </div>
             </div>
           </CardContent>
@@ -254,7 +296,7 @@ export default function CreateTokenPage() {
           <CardContent className="space-y-6">
             {/* Image Upload */}
             <div className="space-y-2">
-              <Label>Token Image</Label>
+              <Label>Token Image *</Label>
               <div className="flex items-center gap-4">
                 {imagePreview ? (
                   <div className="relative">
@@ -310,6 +352,7 @@ export default function CreateTokenPage() {
                   }
                   maxLength={32}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -323,6 +366,7 @@ export default function CreateTokenPage() {
                   }
                   maxLength={10}
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -338,7 +382,40 @@ export default function CreateTokenPage() {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 rows={3}
+                disabled={loading}
               />
+            </div>
+
+            {/* Initial Dev Buy */}
+            <div className="space-y-2">
+              <Label htmlFor="initial_buy">Initial Buy (SOL) *</Label>
+              <Input
+                id="initial_buy"
+                type="number"
+                placeholder="0.01"
+                value={formData.initial_buy_sol}
+                onChange={(e) =>
+                  setFormData({ ...formData, initial_buy_sol: e.target.value })
+                }
+                min="0.001"
+                max="50"
+                step="0.001"
+                disabled={loading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Minimum 0.001 SOL. This creates initial liquidity and enables price discovery.
+              </p>
+            </div>
+
+            {/* Klodchain Address Info */}
+            <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium">Klodchain Address</p>
+                <p className="text-sm text-muted-foreground">
+                  Your token address will end in &quot;klod&quot;
+                </p>
+              </div>
             </div>
 
             {/* Social Links */}
@@ -353,6 +430,7 @@ export default function CreateTokenPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, twitter_url: e.target.value })
                     }
+                    disabled={loading}
                   />
                 </div>
                 <div className="flex items-center gap-3">
@@ -363,6 +441,7 @@ export default function CreateTokenPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, website_url: e.target.value })
                     }
+                    disabled={loading}
                   />
                 </div>
                 <div className="flex items-center gap-3">
@@ -373,30 +452,56 @@ export default function CreateTokenPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, telegram_url: e.target.value })
                     }
+                    disabled={loading}
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 text-sm">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5" />
+                <div>
+                  <p className="font-medium text-orange-500">Real Transaction</p>
+                  <p className="text-muted-foreground">
+                    This will create a real token on Solana mainnet via Klodchain.
+                    Make sure you have SOL in your wallet for transaction fees.
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Submit */}
             <div className="flex gap-3 pt-4">
-              <Link href="/tokens" className="flex-1">
-                <Button variant="outline" className="w-full" type="button">
+              <Link href="/app/tokens" className="flex-1">
+                <Button variant="outline" className="w-full" type="button" disabled={loading}>
                   Cancel
                 </Button>
               </Link>
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={loading || !walletPubkey || walletBalance < 1}
+                disabled={loading || !connected}
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {step === "uploading" && "Uploading..."}
+                    {step === "signing" && "Sign in wallet..."}
+                    {step === "confirming" && "Confirming..."}
+                    {step === "form" && "Processing..."}
+                  </>
+                ) : connected ? (
+                  <>
+                    <Coins className="mr-2 h-4 w-4" />
+                    Create Token
                   </>
                 ) : (
-                  "Create Token (1 KLOD)"
+                  <>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Connect Wallet
+                  </>
                 )}
               </Button>
             </div>
