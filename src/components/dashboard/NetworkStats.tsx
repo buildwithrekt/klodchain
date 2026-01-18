@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSimulationStore } from "@/stores/simulation-store";
 import { createClient } from "@/lib/supabase/client";
 import { formatNumber, formatTps, formatSlot } from "@/lib/utils/formatters";
 import { Blocks, Activity, Users, Receipt } from "lucide-react";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 export function NetworkStats() {
   const { currentSlot, tps, validators, isInitialized } = useSimulationStore();
@@ -90,22 +92,46 @@ export function NetworkStats() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat) => (
-        <Card key={stat.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-            <stat.icon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {stat.loading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-2xl font-bold">{stat.value}</div>
-            )}
-          </CardContent>
-        </Card>
+    <motion.div
+      className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
+      {stats.map((stat, index) => (
+        <motion.div
+          key={stat.title}
+          variants={staggerItem}
+          whileHover={{ y: -2, transition: { duration: 0.2 } }}
+        >
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <motion.div
+                whileHover={{ scale: 1.2, rotate: 10 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <stat.icon className="h-4 w-4 text-muted-foreground" />
+              </motion.div>
+            </CardHeader>
+            <CardContent>
+              {stat.loading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <motion.div
+                  className="text-2xl font-bold"
+                  key={stat.value}
+                  initial={{ scale: 1.05, opacity: 0.8 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {stat.value}
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,15 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  staggerContainer,
+  staggerItem,
+  fadeInUp,
+  scaleIn,
+  cardHover,
+  listItem,
+  pageTransition,
+} from "@/lib/animations";
 
 interface WalletData {
   pubkey: string;
@@ -330,279 +340,368 @@ export default function WalletPage() {
   // Not connected - Show create/import view
   if (!walletAddress) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <Card className="mb-6">
-          <CardContent className="py-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-muted flex items-center justify-center">
-              <div className="w-8 h-8 rotate-45 bg-primary" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              klodchain Wallet
-            </h1>
-            <p className="text-muted-foreground">
-              Create or import your wallet
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-4">
-          <CardContent className="py-6">
-            <h2 className="font-bold text-foreground mb-2">Create New Wallet</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Generate a new klodchain wallet
-            </p>
-            <Button
-              onClick={handleCreateWallet}
-              disabled={isLoading}
-              className="w-full uppercase tracking-wider"
-            >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Create Wallet
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-6">
-          <CardContent className="py-6">
-            <h2 className="font-bold text-foreground mb-2">Import Wallet</h2>
-            <Input
-              placeholder="Enter your private key (64 chars)"
-              value={importKey}
-              onChange={(e) => setImportKey(e.target.value)}
-              className="mb-4 text-sm"
-              type="password"
-            />
-            <Button
-              onClick={handleImportWallet}
-              disabled={isLoading || !importKey}
-              variant="outline"
-              className="w-full uppercase tracking-wider"
-            >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Import Wallet
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Link href="/wallet/leaderboard">
-          <Card className="border-dashed hover:border-primary/50 transition-colors cursor-pointer">
-            <CardContent className="py-4 text-center">
-              <span className="text-muted-foreground text-sm">
-                View Leaderboard &rarr;
-              </span>
+      <motion.div
+        className="container mx-auto px-4 py-8 max-w-3xl"
+        initial="initial"
+        animate="animate"
+        variants={staggerContainer}
+      >
+        <motion.div variants={scaleIn}>
+          <Card className="mb-6">
+            <CardContent className="py-8 text-center">
+              <motion.div
+                className="w-16 h-16 mx-auto mb-4 rounded-xl bg-muted flex items-center justify-center"
+                whileHover={{ rotate: 45, scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <div className="w-8 h-8 rotate-45 bg-primary" />
+              </motion.div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">
+                klodchain Wallet
+              </h1>
+              <p className="text-muted-foreground">
+                Create or import your wallet
+              </p>
             </CardContent>
           </Card>
-        </Link>
-      </div>
+        </motion.div>
+
+        <motion.div variants={staggerItem}>
+          <Card className="mb-4">
+            <CardContent className="py-6">
+              <h2 className="font-bold text-foreground mb-2">Create New Wallet</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Generate a new klodchain wallet
+              </p>
+              <motion.div whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.01 }}>
+                <Button
+                  onClick={handleCreateWallet}
+                  disabled={isLoading}
+                  className="w-full uppercase tracking-wider"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Create Wallet
+                </Button>
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={staggerItem}>
+          <Card className="mb-6">
+            <CardContent className="py-6">
+              <h2 className="font-bold text-foreground mb-2">Import Wallet</h2>
+              <Input
+                placeholder="Enter your private key (64 chars)"
+                value={importKey}
+                onChange={(e) => setImportKey(e.target.value)}
+                className="mb-4 text-sm"
+                type="password"
+              />
+              <motion.div whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.01 }}>
+                <Button
+                  onClick={handleImportWallet}
+                  disabled={isLoading || !importKey}
+                  variant="outline"
+                  className="w-full uppercase tracking-wider"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Import Wallet
+                </Button>
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={staggerItem}>
+          <Link href="/wallet/leaderboard">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card className="border-dashed hover:border-primary/50 transition-colors cursor-pointer">
+                <CardContent className="py-4 text-center">
+                  <span className="text-muted-foreground text-sm">
+                    View Leaderboard &rarr;
+                  </span>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Link>
+        </motion.div>
+      </motion.div>
     );
   }
 
   // Connected - Show dashboard
   return (
-    <div className="container mx-auto px-4 py-6 max-w-3xl">
+    <motion.div
+      className="container mx-auto px-4 py-6 max-w-3xl"
+      initial="initial"
+      animate="animate"
+      variants={staggerContainer}
+    >
       {/* Balance Card */}
-      <Card className="mb-4">
-        <CardContent className="py-6 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-            Total Balance
-          </p>
-          <div className="flex items-baseline justify-center gap-2 mb-2">
-            <span className="text-4xl font-bold text-foreground">
-              ${wallet?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}
-            </span>
-            <span className="text-xl text-primary">USDK</span>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs">
-            <span>{formatAddress(walletAddress)}</span>
-            <button
-              onClick={() => copyToClipboard(walletAddress, "address")}
-              className="text-primary hover:text-primary/80"
+      <motion.div variants={fadeInUp}>
+        <Card className="mb-4">
+          <CardContent className="py-6 text-center">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+              Total Balance
+            </p>
+            <motion.div
+              className="flex items-baseline justify-center gap-2 mb-2"
+              key={wallet?.balance}
+              initial={{ scale: 1.1, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
-              {copiedAddress ? <Check className="w-3 h-3" /> : <span className="uppercase">Copy</span>}
-            </button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Private Key Warning */}
-      {showPrivateKey && wallet?.privateKey && (
-        <Card className="bg-destructive/10 border-destructive/50 mb-4">
-          <CardContent className="py-4">
-            <p className="text-destructive text-xs uppercase tracking-wider mb-2">
-              Save Your Private Key
-            </p>
-            <p className="text-muted-foreground text-sm mb-3">
-              This is shown only once. Save it securely!
-            </p>
-            <div className="bg-background rounded p-3 mb-3 text-xs text-foreground break-all font-mono">
-              {wallet.privateKey}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => copyToClipboard(wallet.privateKey!, "key")}
-                variant="outline"
-                className="flex-1 uppercase text-xs"
+              <span className="text-4xl font-bold text-foreground">
+                ${wallet?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}
+              </span>
+              <span className="text-xl text-primary">USDK</span>
+            </motion.div>
+            <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs">
+              <span>{formatAddress(walletAddress)}</span>
+              <button
+                onClick={() => copyToClipboard(walletAddress, "address")}
+                className="text-primary hover:text-primary/80"
               >
-                {copiedKey ? <><Check className="w-3 h-3 mr-1" /> Copied</> : <><Copy className="w-3 h-3 mr-1" /> Copy</>}
-              </Button>
-              <Button
-                onClick={() => setShowPrivateKey(false)}
-                className="flex-1 uppercase text-xs"
-              >
-                I Saved It
-              </Button>
+                {copiedAddress ? <Check className="w-3 h-3" /> : <span className="uppercase">Copy</span>}
+              </button>
             </div>
           </CardContent>
         </Card>
-      )}
+      </motion.div>
+
+      {/* Private Key Warning */}
+      <AnimatePresence>
+        {showPrivateKey && wallet?.privateKey && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="bg-destructive/10 border-destructive/50 mb-4">
+              <CardContent className="py-4">
+                <p className="text-destructive text-xs uppercase tracking-wider mb-2">
+                  Save Your Private Key
+                </p>
+                <p className="text-muted-foreground text-sm mb-3">
+                  This is shown only once. Save it securely!
+                </p>
+                <div className="bg-background rounded p-3 mb-3 text-xs text-foreground break-all font-mono">
+                  {wallet.privateKey}
+                </div>
+                <div className="flex gap-2">
+                  <motion.div whileTap={{ scale: 0.98 }} className="flex-1">
+                    <Button
+                      onClick={() => copyToClipboard(wallet.privateKey!, "key")}
+                      variant="outline"
+                      className="w-full uppercase text-xs"
+                    >
+                      {copiedKey ? <><Check className="w-3 h-3 mr-1" /> Copied</> : <><Copy className="w-3 h-3 mr-1" /> Copy</>}
+                    </Button>
+                  </motion.div>
+                  <motion.div whileTap={{ scale: 0.98 }} className="flex-1">
+                    <Button
+                      onClick={() => setShowPrivateKey(false)}
+                      className="w-full uppercase text-xs"
+                    >
+                      I Saved It
+                    </Button>
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <motion.div variants={staggerItem} className="grid grid-cols-2 gap-3 mb-4">
         <Link href="/wallet/send">
-          <Button className="w-full uppercase tracking-wider h-14">
-            <Send className="w-4 h-4 mr-2" />
-            Send
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button className="w-full uppercase tracking-wider h-14">
+              <Send className="w-4 h-4 mr-2" />
+              Send
+            </Button>
+          </motion.div>
         </Link>
         {wallet?.faucetReady ? (
-          <Button
-            onClick={handleClaimFaucet}
-            disabled={isLoading}
-            variant="outline"
-            className="w-full uppercase tracking-wider h-14"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <ArrowDownToLine className="w-4 h-4 mr-2" />
-            )}
-            {isLoading ? "Claiming..." : "Claim Faucet"}
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              onClick={handleClaimFaucet}
+              disabled={isLoading}
+              variant="outline"
+              className="w-full uppercase tracking-wider h-14"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <ArrowDownToLine className="w-4 h-4 mr-2" />
+              )}
+              {isLoading ? "Claiming..." : "Claim Faucet"}
+            </Button>
+          </motion.div>
         ) : (
           <Button disabled variant="outline" className="w-full uppercase tracking-wider h-14">
             <Clock className="w-4 h-4 mr-2" />
             {formatCooldown(wallet?.faucetCooldownRemaining ?? 0)}
           </Button>
         )}
-      </div>
+      </motion.div>
 
       {/* Faucet Info */}
-      <Card className="mb-4">
-        <CardContent className="py-3 flex justify-between items-center">
-          <div>
-            <p className="text-xs text-muted-foreground uppercase">Faucet</p>
-            <p className="text-foreground">$130 USDK / 24h</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase">Status</p>
-            {wallet?.faucetReady ? (
-              <p className="text-green-400 flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full" /> Ready
-              </p>
-            ) : (
-              <p className="text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {formatCooldown(wallet?.faucetCooldownRemaining ?? 0)}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <motion.div variants={staggerItem}>
+        <Card className="mb-4">
+          <CardContent className="py-3 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase">Faucet</p>
+              <p className="text-foreground">$130 USDK / 24h</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground uppercase">Status</p>
+              {wallet?.faucetReady ? (
+                <p className="text-green-400 flex items-center gap-1">
+                  <motion.span
+                    className="w-2 h-2 bg-green-400 rounded-full"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  /> Ready
+                </p>
+              ) : (
+                <p className="text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {formatCooldown(wallet?.faucetCooldownRemaining ?? 0)}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-xs text-muted-foreground uppercase mb-1">Transactions</p>
-            <p className="text-xl text-foreground">{wallet?.transactionCount ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-xs text-muted-foreground uppercase mb-1">Received</p>
-            <p className="text-xl text-foreground">${wallet?.totalReceived?.toFixed(2) ?? '0.00'}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-xs text-muted-foreground uppercase mb-1">Sent</p>
-            <p className="text-xl text-foreground">${wallet?.totalSent?.toFixed(2) ?? '0.00'}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <motion.div variants={staggerItem} className="grid grid-cols-3 gap-3 mb-4">
+        {[
+          { label: "Transactions", value: wallet?.transactionCount ?? 0 },
+          { label: "Received", value: `$${wallet?.totalReceived?.toFixed(2) ?? '0.00'}` },
+          { label: "Sent", value: `$${wallet?.totalSent?.toFixed(2) ?? '0.00'}` },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+          >
+            <Card>
+              <CardContent className="py-4 text-center">
+                <p className="text-xs text-muted-foreground uppercase mb-1">{stat.label}</p>
+                <p className="text-xl text-foreground">{stat.value}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
 
       {/* Recent Transactions */}
-      <Card className="mb-4">
-        <CardContent className="py-4">
-          <h3 className="font-bold text-foreground uppercase text-sm mb-3">
-            Recent Transactions
-          </h3>
-          {transactions.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="w-8 h-8 rotate-45 bg-muted mx-auto mb-2" />
-              <p className="text-muted-foreground text-sm">No transactions yet</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {transactions.slice(0, 5).map((tx) => (
-                <Link
-                  key={tx.signature}
-                  href={`/explorer/tx/${tx.signature}`}
-                  className="flex items-center justify-between bg-muted/50 rounded p-3 hover:bg-muted transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        tx.to_pubkey === walletAddress
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-destructive/20 text-destructive"
-                      }`}
+      <motion.div variants={staggerItem}>
+        <Card className="mb-4">
+          <CardContent className="py-4">
+            <h3 className="font-bold text-foreground uppercase text-sm mb-3">
+              Recent Transactions
+            </h3>
+            {transactions.length === 0 ? (
+              <motion.div
+                className="text-center py-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <motion.div
+                  className="w-8 h-8 rotate-45 bg-muted mx-auto mb-2"
+                  animate={{ rotate: [45, 90, 45] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <p className="text-muted-foreground text-sm">No transactions yet</p>
+              </motion.div>
+            ) : (
+              <div className="space-y-2">
+                <AnimatePresence mode="popLayout">
+                  {transactions.slice(0, 5).map((tx, index) => (
+                    <motion.div
+                      key={tx.signature}
+                      variants={listItem}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      layout
+                      transition={{ delay: index * 0.05 }}
                     >
-                      {tx.to_pubkey === walletAddress ? (
-                        <ArrowDownToLine className="w-4 h-4" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-foreground text-sm">
-                        {tx.transaction_type === "faucet_claim" && "Faucet Claim"}
-                        {tx.transaction_type === "token_transfer" && (tx.to_pubkey === walletAddress ? "Received" : "Sent")}
-                        {tx.transaction_type === "transfer" && (tx.to_pubkey === walletAddress ? "Received" : "Sent")}
-                        {tx.transaction_type === "create_account" && "Account Created"}
-                        {tx.transaction_type === "program_call" && "Program Call"}
-                        {!["faucet_claim", "token_transfer", "transfer", "create_account", "program_call"].includes(tx.transaction_type) &&
-                          tx.transaction_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatTimeAgo(tx.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                  <p className={tx.to_pubkey === walletAddress ? "text-green-400" : "text-destructive"}>
-                    {tx.to_pubkey === walletAddress ? "+" : "-"}${tx.amount} USDK
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      <Link
+                        href={`/explorer/tx/${tx.signature}`}
+                        className="flex items-center justify-between bg-muted/50 rounded p-3 hover:bg-muted transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <motion.div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              tx.to_pubkey === walletAddress
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-destructive/20 text-destructive"
+                            }`}
+                            whileHover={{ scale: 1.1 }}
+                          >
+                            {tx.to_pubkey === walletAddress ? (
+                              <ArrowDownToLine className="w-4 h-4" />
+                            ) : (
+                              <Send className="w-4 h-4" />
+                            )}
+                          </motion.div>
+                          <div>
+                            <p className="text-foreground text-sm">
+                              {tx.transaction_type === "faucet_claim" && "Faucet Claim"}
+                              {tx.transaction_type === "token_transfer" && (tx.to_pubkey === walletAddress ? "Received" : "Sent")}
+                              {tx.transaction_type === "transfer" && (tx.to_pubkey === walletAddress ? "Received" : "Sent")}
+                              {tx.transaction_type === "create_account" && "Account Created"}
+                              {tx.transaction_type === "program_call" && "Program Call"}
+                              {!["faucet_claim", "token_transfer", "transfer", "create_account", "program_call"].includes(tx.transaction_type) &&
+                                tx.transaction_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatTimeAgo(tx.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <p className={tx.to_pubkey === walletAddress ? "text-green-400" : "text-destructive"}>
+                          {tx.to_pubkey === walletAddress ? "+" : "-"}${tx.amount} USDK
+                        </p>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Bottom Buttons */}
-      <div className="grid grid-cols-2 gap-3">
+      <motion.div variants={staggerItem} className="grid grid-cols-2 gap-3">
         <Link href="/wallet/leaderboard">
-          <Button variant="outline" className="w-full uppercase tracking-wider">
-            Leaderboard
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button variant="outline" className="w-full uppercase tracking-wider">
+              Leaderboard
+            </Button>
+          </motion.div>
         </Link>
-        <Button
-          onClick={handleDisconnect}
-          variant="outline"
-          className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 uppercase tracking-wider"
-        >
-          Disconnect
-        </Button>
-      </div>
-    </div>
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <Button
+            onClick={handleDisconnect}
+            variant="outline"
+            className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 uppercase tracking-wider"
+          >
+            Disconnect
+          </Button>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }
