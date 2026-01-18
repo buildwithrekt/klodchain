@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
 
     let query = supabase
-      .from("memecoins")
+      .from("created_tokens")
       .select("*", { count: "exact" });
 
     // Search by name or symbol
@@ -27,11 +27,9 @@ export async function GET(req: NextRequest) {
 
     // Sort
     if (sort === "market_cap") {
-      query = query.order("market_cap", { ascending: order });
-    } else if (sort === "volume") {
-      query = query.order("volume_24h", { ascending: order });
+      query = query.order("market_cap_sol", { ascending: order, nullsFirst: false });
     } else if (sort === "price") {
-      query = query.order("price", { ascending: order });
+      query = query.order("price_sol", { ascending: order, nullsFirst: false });
     } else {
       query = query.order("created_at", { ascending: order });
     }
