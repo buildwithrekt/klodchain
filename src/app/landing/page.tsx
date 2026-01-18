@@ -143,7 +143,7 @@ function LiveBlockFeed() {
                 #{block.slot.toLocaleString()}
               </span>
               <span className="font-mono text-[10px] text-muted-foreground">
-                0x{block.hash}...
+                {block.hash}...
               </span>
             </div>
           </div>
