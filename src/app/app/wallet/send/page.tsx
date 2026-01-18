@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { ArrowLeft, Send, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface WalletData {
   pubkey: string;
@@ -122,89 +124,100 @@ export default function SendPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-xl">
+    <motion.div
+      className="container mx-auto px-4 py-6 max-w-xl"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {/* Back Button */}
-      <Link
-        href="/wallet"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 text-sm"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Wallet
-      </Link>
+      <motion.div variants={staggerItem}>
+        <Link
+          href="/wallet"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Wallet
+        </Link>
+      </motion.div>
 
       {/* Send Card */}
-      <Card>
-        <CardContent className="py-6">
-          <h1 className="text-xl font-bold text-primary mb-4">
-            Send $klodchain
-          </h1>
+      <motion.div variants={staggerItem}>
+        <Card>
+          <CardContent className="py-6">
+            <h1 className="text-xl font-bold text-primary mb-4">
+              Send $klodchain
+            </h1>
 
-          {/* Recipient */}
-          <div className="space-y-2 mb-4">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-              Recipient Address
-            </Label>
-            <Input
-              placeholder="klod_..."
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-
-          {/* Amount */}
-          <div className="space-y-2 mb-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
-              Amount
-            </Label>
-            <div className="relative">
+            {/* Recipient */}
+            <div className="space-y-2 mb-4">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                Recipient Address
+              </Label>
               <Input
-                type="number"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                placeholder="klod_..."
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
                 disabled={isLoading}
-                className="pr-24"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-primary text-sm">
-                $klodchain
-              </span>
             </div>
-          </div>
 
-          {/* Available Balance */}
-          <div className="flex justify-between items-center mb-6 text-sm">
-            <span className="text-muted-foreground">
-              Available: {wallet?.balance.toLocaleString() || 0} $klodchain
-            </span>
-            <button
-              onClick={handleMax}
-              className="text-primary hover:text-primary/80 uppercase text-xs"
-            >
-              Max
-            </button>
-          </div>
+            {/* Amount */}
+            <div className="space-y-2 mb-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                Amount
+              </Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  disabled={isLoading}
+                  className="pr-24"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-primary text-sm">
+                  $klodchain
+                </span>
+              </div>
+            </div>
 
-          {/* Send Button */}
-          <Button
-            onClick={handleSend}
-            disabled={isLoading || !recipient || !amount}
-            className="w-full uppercase tracking-wider h-12"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Send $klodchain
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+            {/* Available Balance */}
+            <div className="flex justify-between items-center mb-6 text-sm">
+              <span className="text-muted-foreground">
+                Available: {wallet?.balance.toLocaleString() || 0} $klodchain
+              </span>
+              <button
+                onClick={handleMax}
+                className="text-primary hover:text-primary/80 uppercase text-xs"
+              >
+                Max
+              </button>
+            </div>
+
+            {/* Send Button */}
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={handleSend}
+                disabled={isLoading || !recipient || !amount}
+                className="w-full uppercase tracking-wider h-12"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send $klodchain
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }

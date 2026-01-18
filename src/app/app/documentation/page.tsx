@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Code, Copy, Check, Zap, Shield, Database, ExternalLink } from "lucide-react";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface Endpoint {
   method: "GET" | "POST";
@@ -375,28 +377,38 @@ export default function ApiDocsPage() {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://klodchain.vercel.app";
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <motion.div
+      className="max-w-7xl mx-auto px-4 py-6 space-y-6"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/">Home</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>API Documentation</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <motion.div variants={staggerItem}>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>API Documentation</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </motion.div>
 
       {/* Header */}
-      <div className="space-y-4">
+      <motion.div variants={staggerItem} className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+          <motion.div
+            className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+          >
             <Code className="h-6 w-6 text-primary" />
-          </div>
+          </motion.div>
           <div>
             <h1 className="text-3xl font-bold">Klodchain API</h1>
             <p className="text-muted-foreground">Public REST API for blockchain data</p>
@@ -405,70 +417,80 @@ export default function ApiDocsPage() {
 
         {/* Features */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <Card>
-            <CardContent className="flex items-center gap-3 pt-6">
-              <Zap className="h-8 w-8 text-yellow-500" />
-              <div>
-                <h3 className="font-semibold">Fast & Free</h3>
-                <p className="text-sm text-muted-foreground">No API key required</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 pt-6">
-              <Shield className="h-8 w-8 text-green-500" />
-              <div>
-                <h3 className="font-semibold">Rate Limited</h3>
-                <p className="text-sm text-muted-foreground">10 requests/minute per IP</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 pt-6">
-              <Database className="h-8 w-8 text-blue-500" />
-              <div>
-                <h3 className="font-semibold">Real-time Data</h3>
-                <p className="text-sm text-muted-foreground">Live blockchain data</p>
-              </div>
-            </CardContent>
-          </Card>
+          <motion.div whileHover={{ scale: 1.02 }}>
+            <Card>
+              <CardContent className="flex items-center gap-3 pt-6">
+                <Zap className="h-8 w-8 text-yellow-500" />
+                <div>
+                  <h3 className="font-semibold">Fast & Free</h3>
+                  <p className="text-sm text-muted-foreground">No API key required</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.02 }}>
+            <Card>
+              <CardContent className="flex items-center gap-3 pt-6">
+                <Shield className="h-8 w-8 text-green-500" />
+                <div>
+                  <h3 className="font-semibold">Rate Limited</h3>
+                  <p className="text-sm text-muted-foreground">10 requests/minute per IP</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.02 }}>
+            <Card>
+              <CardContent className="flex items-center gap-3 pt-6">
+                <Database className="h-8 w-8 text-blue-500" />
+                <div>
+                  <h3 className="font-semibold">Real-time Data</h3>
+                  <p className="text-sm text-muted-foreground">Live blockchain data</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Base URL */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Base URL</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CodeBlock code={`${baseUrl}/api/v1`} language="text" />
-        </CardContent>
-      </Card>
+      <motion.div variants={staggerItem}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Base URL</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CodeBlock code={`${baseUrl}/api/v1`} language="text" />
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Rate Limiting */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Rate Limiting</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            All API endpoints are rate limited to <strong>10 requests per minute</strong> per IP address.
-          </p>
-          <p className="text-sm text-muted-foreground">Rate limit information is included in response headers:</p>
-          <CodeBlock
-            code={`X-RateLimit-Limit: 10
+      <motion.div variants={staggerItem}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Rate Limiting</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              All API endpoints are rate limited to <strong>10 requests per minute</strong> per IP address.
+            </p>
+            <p className="text-sm text-muted-foreground">Rate limit information is included in response headers:</p>
+            <CodeBlock
+              code={`X-RateLimit-Limit: 10
 X-RateLimit-Remaining: 9
 X-RateLimit-Reset: 1705312200000`}
-            language="text"
-          />
-          <p className="text-sm text-muted-foreground">
-            When rate limited, you&apos;ll receive a <code className="px-1 py-0.5 bg-muted rounded">429 Too Many Requests</code> response.
-          </p>
-        </CardContent>
-      </Card>
+              language="text"
+            />
+            <p className="text-sm text-muted-foreground">
+              When rate limited, you&apos;ll receive a <code className="px-1 py-0.5 bg-muted rounded">429 Too Many Requests</code> response.
+            </p>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Endpoints */}
-      <div className="space-y-4">
+      <motion.div variants={staggerItem} className="space-y-4">
         <h2 className="text-2xl font-bold">Endpoints</h2>
 
         <Tabs defaultValue="blocks" className="w-full">
@@ -503,28 +525,30 @@ X-RateLimit-Reset: 1705312200000`}
             <EndpointCard endpoint={endpoints[5]} />
           </TabsContent>
         </Tabs>
-      </div>
+      </motion.div>
 
       {/* Example */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Example</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">Fetch the latest 5 blocks using curl:</p>
-          <CodeBlock code={`curl "${baseUrl}/api/v1/blocks?limit=5"`} language="bash" />
-          <p className="text-sm text-muted-foreground">Or using JavaScript:</p>
-          <CodeBlock
-            code={`const response = await fetch("${baseUrl}/api/v1/blocks?limit=5");
+      <motion.div variants={staggerItem}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Quick Example</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">Fetch the latest 5 blocks using curl:</p>
+            <CodeBlock code={`curl "${baseUrl}/api/v1/blocks?limit=5"`} language="bash" />
+            <p className="text-sm text-muted-foreground">Or using JavaScript:</p>
+            <CodeBlock
+              code={`const response = await fetch("${baseUrl}/api/v1/blocks?limit=5");
 const data = await response.json();
 console.log(data);`}
-            language="javascript"
-          />
-        </CardContent>
-      </Card>
+              language="javascript"
+            />
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Footer */}
-      <div className="text-center text-sm text-muted-foreground py-8">
+      <motion.div variants={staggerItem} className="text-center text-sm text-muted-foreground py-8">
         <p>Built with Next.js & Supabase</p>
         <div className="flex items-center justify-center gap-4 mt-2">
           <Link href="/explorer" className="text-primary hover:underline flex items-center gap-1">
@@ -537,7 +561,7 @@ console.log(data);`}
             Wallet <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import {
 } from "@/types/custom-agent";
 import { createAgent } from "@/lib/agents/storage";
 import { toast } from "sonner";
+import { staggerContainer, staggerItem, fadeInUp } from "@/lib/animations";
 
 const SYMBOL_ICONS: Record<AgentSymbol, React.ReactNode> = {
   eye: <Eye className="h-5 w-5" />,
@@ -110,13 +112,23 @@ export default function NewAgentPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <motion.div
+      className="max-w-3xl mx-auto px-4 py-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <motion.div
+        className="flex items-center gap-4 mb-6"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
         <Link href="/deploy">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </motion.div>
         </Link>
         <div>
           <h1 className="text-xl font-bold">New Agent</h1>
@@ -124,25 +136,36 @@ export default function NewAgentPage() {
             {STEPS[step]} · Step {step + 1}/4
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Progress */}
       <div className="flex gap-1 mb-8">
         {STEPS.map((_, i) => (
-          <div
+          <motion.div
             key={i}
             className={`h-1 flex-1 rounded-full transition-colors ${
               i <= step ? "bg-primary" : "bg-muted"
             }`}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: i * 0.1 }}
           />
         ))}
       </div>
 
       {/* Step Content */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          {/* Step 1: Identity */}
-          {step === 0 && (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              {/* Step 1: Identity */}
+              {step === 0 && (
             <div className="space-y-6">
               {/* Name */}
               <div>
@@ -397,32 +420,45 @@ export default function NewAgentPage() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Navigation */}
-      <div className="flex justify-between">
-        <Button
-          variant="ghost"
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+      <motion.div
+        className="flex justify-between"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <Button
+            variant="ghost"
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            disabled={step === 0}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        </motion.div>
 
         {step < 3 ? (
-          <Button onClick={() => setStep((s) => s + 1)} disabled={!canProceed()}>
-            Next
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button onClick={() => setStep((s) => s + 1)} disabled={!canProceed()}>
+              Next
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </motion.div>
         ) : (
-          <Button onClick={handleDeploy} className="gap-2">
-            <Rocket className="h-4 w-4" />
-            Deploy
-          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={handleDeploy} className="gap-2">
+              <Rocket className="h-4 w-4" />
+              Deploy
+            </Button>
+          </motion.div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

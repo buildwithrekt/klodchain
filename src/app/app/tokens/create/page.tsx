@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 export default function CreateTokenPage() {
   const router = useRouter();
@@ -147,87 +149,102 @@ export default function CreateTokenPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <motion.div
+      className="max-w-3xl mx-auto px-4 py-6 space-y-6"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/">Home</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/tokens">Tokens</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Create</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <motion.div variants={staggerItem}>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/tokens">Tokens</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Create</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </motion.div>
 
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+      <motion.div variants={staggerItem} className="flex items-center gap-3">
+        <motion.div
+          className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10"
+          whileHover={{ scale: 1.1, rotate: 10 }}
+        >
           <Coins className="h-6 w-6 text-primary" />
-        </div>
+        </motion.div>
         <div>
           <h1 className="text-2xl font-bold">Create Token</h1>
           <p className="text-muted-foreground text-sm">
             Launch your memecoin on klodchain
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Wallet Warning */}
       {!walletPubkey && (
-        <Card className="border-yellow-500/50 bg-yellow-500/10">
+        <motion.div variants={staggerItem}>
+          <Card className="border-yellow-500/50 bg-yellow-500/10">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <p className="font-medium">Wallet not connected</p>
+                  <p className="text-sm text-muted-foreground">
+                    Please{" "}
+                    <Link href="/wallet" className="text-primary hover:underline">
+                      connect your wallet
+                    </Link>{" "}
+                    to create a token.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Creation Cost */}
+      <motion.div variants={staggerItem}>
+        <Card>
           <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Wallet not connected</p>
+                <p className="font-medium">Creation Cost</p>
                 <p className="text-sm text-muted-foreground">
-                  Please{" "}
-                  <Link href="/wallet" className="text-primary hover:underline">
-                    connect your wallet
-                  </Link>{" "}
-                  to create a token.
+                  1 billion tokens supply, bonding curve pricing
                 </p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold">1 KLOD</p>
+                {walletPubkey && (
+                  <p className="text-sm text-muted-foreground">
+                    Balance: {walletBalance} KLOD
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Creation Cost */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Creation Cost</p>
-              <p className="text-sm text-muted-foreground">
-                1 billion tokens supply, bonding curve pricing
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold">1 KLOD</p>
-              {walletPubkey && (
-                <p className="text-sm text-muted-foreground">
-                  Balance: {walletBalance} KLOD
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </motion.div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit}>
-        <Card>
+      <motion.div variants={staggerItem}>
+        <form onSubmit={handleSubmit}>
+          <Card>
           <CardHeader>
             <CardTitle>Token Details</CardTitle>
             <CardDescription>
@@ -384,8 +401,9 @@ export default function CreateTokenPage() {
               </Button>
             </div>
           </CardContent>
-        </Card>
-      </form>
-    </div>
+          </Card>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }

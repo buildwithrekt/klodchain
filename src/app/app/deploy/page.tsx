@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
 } from "@/lib/agents/storage";
 import { CustomAgentFeed } from "@/components/deploy/CustomAgentFeed";
 import { DeleteAgentModal, ChatAgentModal } from "@/components/deploy/AgentModals";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 const SYMBOL_ICONS: Record<AgentSymbol, React.ReactNode> = {
   eye: <Eye className="h-5 w-5" />,
@@ -95,13 +97,21 @@ export default function DeployPage() {
   const totalInteractions = mounted ? getTotalInteractions() : 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <motion.div
+      className="max-w-7xl mx-auto px-4 py-6"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {/* Hero Section */}
-      <div className="mb-8">
+      <motion.div variants={staggerItem} className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-primary/10">
+          <motion.div
+            className="p-2 rounded-lg bg-primary/10"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+          >
             <Bot className="h-6 w-6 text-primary" />
-          </div>
+          </motion.div>
           <div>
             <h1 className="text-2xl font-bold">Agent Factory</h1>
             <p className="text-sm text-muted-foreground">
@@ -109,51 +119,59 @@ export default function DeployPage() {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats + CTA Row */}
-      <div className="grid grid-cols-12 gap-4 mb-8">
-        <Card className="col-span-3 p-4">
-          <div className="flex items-center gap-3">
-            <Cpu className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-2xl font-bold">{agents.length}</p>
-              <p className="text-xs text-muted-foreground">Deployed</p>
+      <motion.div variants={staggerItem} className="grid grid-cols-12 gap-4 mb-8">
+        <motion.div whileHover={{ scale: 1.02 }} className="col-span-3">
+          <Card className="p-4 h-full">
+            <div className="flex items-center gap-3">
+              <Cpu className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-2xl font-bold">{agents.length}</p>
+                <p className="text-xs text-muted-foreground">Deployed</p>
+              </div>
             </div>
-          </div>
-        </Card>
-        <Card className="col-span-3 p-4">
-          <div className="flex items-center gap-3">
-            <Activity className="h-5 w-5 text-green-400" />
-            <div>
-              <p className="text-2xl font-bold text-green-400">{activeCount}</p>
-              <p className="text-xs text-muted-foreground">Active</p>
+          </Card>
+        </motion.div>
+        <motion.div whileHover={{ scale: 1.02 }} className="col-span-3">
+          <Card className="p-4 h-full">
+            <div className="flex items-center gap-3">
+              <Activity className="h-5 w-5 text-green-400" />
+              <div>
+                <p className="text-2xl font-bold text-green-400">{activeCount}</p>
+                <p className="text-xs text-muted-foreground">Active</p>
+              </div>
             </div>
-          </div>
-        </Card>
-        <Card className="col-span-3 p-4">
-          <div className="flex items-center gap-3">
-            <Zap className="h-5 w-5 text-yellow-400" />
-            <div>
-              <p className="text-2xl font-bold">{totalInteractions}</p>
-              <p className="text-xs text-muted-foreground">Thoughts</p>
+          </Card>
+        </motion.div>
+        <motion.div whileHover={{ scale: 1.02 }} className="col-span-3">
+          <Card className="p-4 h-full">
+            <div className="flex items-center gap-3">
+              <Zap className="h-5 w-5 text-yellow-400" />
+              <div>
+                <p className="text-2xl font-bold">{totalInteractions}</p>
+                <p className="text-xs text-muted-foreground">Thoughts</p>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </motion.div>
         <div className="col-span-3">
           <Link href="/deploy/new" className="block h-full">
-            <Card className="h-full p-4 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
-              <div className="flex items-center justify-center gap-2 h-full">
-                <Plus className="h-5 w-5 text-primary" />
-                <span className="font-medium text-primary">New Agent</span>
-              </div>
-            </Card>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="h-full">
+              <Card className="h-full p-4 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
+                <div className="flex items-center justify-center gap-2 h-full">
+                  <Plus className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-primary">New Agent</span>
+                </div>
+              </Card>
+            </motion.div>
           </Link>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-12 gap-6">
+      <motion.div variants={staggerItem} className="grid grid-cols-12 gap-6">
         {/* Agents List */}
         <div className="col-span-7">
           <div className="flex items-center justify-between mb-4">
@@ -166,32 +184,45 @@ export default function DeployPage() {
           </div>
 
           {agents.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <Ghost className="h-10 w-10 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="font-medium mb-1">No agents yet</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Deploy your first autonomous agent
-                </p>
-                <Link href="/deploy/new">
-                  <Button size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Create Agent
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+            >
+              <Card className="border-dashed">
+                <CardContent className="py-12 text-center">
+                  <Ghost className="h-10 w-10 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="font-medium mb-1">No agents yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Deploy your first autonomous agent
+                  </p>
+                  <Link href="/deploy/new">
+                    <Button size="sm" className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Create Agent
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
           ) : (
             <div className="space-y-2">
-              {agents.map((agent) => (
-                <Card
-                  key={agent.id}
-                  className={`transition-all ${
-                    agent.isActive
-                      ? "border-l-2 border-l-primary"
-                      : "opacity-50"
-                  }`}
-                >
+              <AnimatePresence mode="popLayout">
+                {agents.map((agent, index) => (
+                  <motion.div
+                    key={agent.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: index * 0.05 }}
+                    layout
+                  >
+                    <Card
+                      className={`transition-all ${
+                        agent.isActive
+                          ? "border-l-2 border-l-primary"
+                          : "opacity-50"
+                      }`}
+                    >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       {/* Icon */}
@@ -268,8 +299,10 @@ export default function DeployPage() {
                       </div>
                     </div>
                   </CardContent>
-                </Card>
-              ))}
+                    </Card>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -283,7 +316,7 @@ export default function DeployPage() {
           </div>
           <CustomAgentFeed />
         </div>
-      </div>
+      </motion.div>
 
       {/* Modals */}
       <DeleteAgentModal
@@ -297,6 +330,6 @@ export default function DeployPage() {
         open={chatModalOpen}
         onOpenChange={setChatModalOpen}
       />
-    </div>
+    </motion.div>
   );
 }

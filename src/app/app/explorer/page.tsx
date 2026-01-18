@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import { useBlocks } from "@/hooks/useBlocks";
 import { useTransactions } from "@/hooks/useTransactions";
 import { shortenHash, shortenPubkey, formatSol, formatTimestamp } from "@/lib/utils/formatters";
 import { Search, Blocks, Receipt, ArrowRight, Loader2, User, Code, FileCheck, Wallet, ArrowLeftRight } from "lucide-react";
+import { staggerContainer, staggerItem, scaleIn } from "@/lib/animations";
 
 interface SearchResult {
   type: "block" | "transaction" | "account" | "validator" | "program" | "wallet" | "wallet_transaction" | "token";
@@ -110,85 +112,106 @@ export default function ExplorerPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <motion.div
+      className="max-w-7xl mx-auto px-4 py-6 space-y-6"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/">Home</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Explorer</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <motion.div variants={staggerItem}>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Explorer</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </motion.div>
 
       {/* Search */}
-        <div ref={searchRef} className="relative">
-          <Card>
-            <CardContent className="pt-6">
+      <motion.div variants={staggerItem} ref={searchRef} className="relative">
+        <Card>
+          <CardContent className="pt-6">
             <div className="relative">
-  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-  <Input
-    placeholder="Search by slot, blockhash, signature, pubkey, program..."
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-    onFocus={() => results.length > 0 && setShowResults(true)}
-    className="pl-10 pr-10"
-  />
-  {searching && 
-  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-  }
-</div>
-            </CardContent>
-          </Card>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by slot, blockhash, signature, pubkey, program..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => results.length > 0 && setShowResults(true)}
+                className="pl-10 pr-10"
+              />
+              {searching &&
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              }
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Search Results Dropdown */}
+        {/* Search Results Dropdown */}
+        <AnimatePresence>
           {showResults && (
-            <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-[400px] overflow-auto shadow-lg">
-              <CardContent className="p-2">
-                {results.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No results found
-                  </p>
-                ) : (
-                  <div className="space-y-1">
-                    {results.map((result, index) => {
-                      const Icon = typeIcons[result.type];
-                      return (
-                        <button
-                          key={`${result.url}-${index}`}
-                          onClick={() => handleResultClick(result.url)}
-                          className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
-                        >
-                          <div className={`p-2 rounded-lg ${typeColors[result.type]}`}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-mono text-sm truncate">{result.label}</p>
-                            {result.sublabel && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {result.sublabel}
-                              </p>
-                            )}
-                          </div>
-                          <Badge variant="outline" className="capitalize text-xs shrink-0">
-                            {result.type === "wallet_transaction" ? "wallet tx" : result.type}
-                          </Badge>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-[400px] overflow-auto shadow-lg">
+                <CardContent className="p-2">
+                  {results.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No results found
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {results.map((result, index) => {
+                        const Icon = typeIcons[result.type];
+                        return (
+                          <motion.button
+                            key={`${result.url}-${index}`}
+                            onClick={() => handleResultClick(result.url)}
+                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors text-left"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            whileHover={{ x: 4 }}
+                          >
+                            <div className={`p-2 rounded-lg ${typeColors[result.type]}`}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-mono text-sm truncate">{result.label}</p>
+                              {result.sublabel && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {result.sublabel}
+                                </p>
+                              )}
+                            </div>
+                            <Badge variant="outline" className="capitalize text-xs shrink-0">
+                              {result.type === "wallet_transaction" ? "wallet tx" : result.type}
+                            </Badge>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+      </motion.div>
 
-        {/* Tabs */}
+      {/* Tabs */}
+      <motion.div variants={staggerItem}>
         <Tabs defaultValue="blocks">
           <TabsList>
             <TabsTrigger value="blocks" className="gap-2">
@@ -350,6 +373,7 @@ export default function ExplorerPage() {
             </Card>
           </TabsContent>
         </Tabs>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

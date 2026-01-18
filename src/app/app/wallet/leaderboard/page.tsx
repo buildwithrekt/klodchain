@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface LeaderboardEntry {
   rank: number;
@@ -51,57 +53,68 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-3xl">
+    <motion.div
+      className="container mx-auto px-4 py-6 max-w-3xl"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {/* Back Button */}
-      <Link
-        href="/wallet"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 text-sm"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back
-      </Link>
+      <motion.div variants={staggerItem}>
+        <Link
+          href="/wallet"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Link>
+      </motion.div>
 
       {/* Leaderboard Card */}
-      <Card>
-        <CardContent className="py-6">
-          <h1 className="text-xl font-bold text-primary text-center mb-2">
-            Wallet Leaderboard
-          </h1>
-          <p className="text-muted-foreground text-center text-sm mb-6">
-            Top $klodchain holders on klodchain
-          </p>
+      <motion.div variants={staggerItem}>
+        <Card>
+          <CardContent className="py-6">
+            <h1 className="text-xl font-bold text-primary text-center mb-2">
+              Wallet Leaderboard
+            </h1>
+            <p className="text-muted-foreground text-center text-sm mb-6">
+              Top $klodchain holders on klodchain
+            </p>
 
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-muted-foreground text-sm">Loading...</p>
-            </div>
-          ) : leaderboard.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="w-8 h-8 rotate-45 bg-muted mx-auto mb-2" />
-              <p className="text-muted-foreground text-sm">No wallets yet</p>
-            </div>
-          ) : (
-            <>
-              {/* Table Header */}
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border">
-                <div className="col-span-2">Rank</div>
-                <div className="col-span-5">Address</div>
-                <div className="col-span-3 text-right">Balance</div>
-                <div className="col-span-2 text-right">TXs</div>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">Loading...</p>
               </div>
+            ) : leaderboard.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 rotate-45 bg-muted mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">No wallets yet</p>
+              </div>
+            ) : (
+              <>
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-muted-foreground uppercase tracking-wider border-b border-border">
+                  <div className="col-span-2">Rank</div>
+                  <div className="col-span-5">Address</div>
+                  <div className="col-span-3 text-right">Balance</div>
+                  <div className="col-span-2 text-right">TXs</div>
+                </div>
 
-              {/* Table Body */}
-              <div className="divide-y divide-border/50">
-                {leaderboard.map((entry) => (
-                  <div
-                    key={entry.pubkey}
-                    className={`grid grid-cols-12 gap-2 px-4 py-3 items-center ${
-                      entry.isCurrentWallet
-                        ? "bg-primary/10 border-l-2 border-primary"
-                        : ""
-                    }`}
-                  >
+                {/* Table Body */}
+                <div className="divide-y divide-border/50">
+                  {leaderboard.map((entry, index) => (
+                    <motion.div
+                      key={entry.pubkey}
+                      className={`grid grid-cols-12 gap-2 px-4 py-3 items-center ${
+                        entry.isCurrentWallet
+                          ? "bg-primary/10 border-l-2 border-primary"
+                          : ""
+                      }`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
                     <div className="col-span-2">
                       <span
                         className={
@@ -134,45 +147,51 @@ export default function LeaderboardPage() {
                         {entry.transactionCount}
                       </span>
                     </div>
-                  </div>
-                ))}
+                    </motion.div>
+                  ))}
 
-                {/* Current wallet rank if not in top list */}
-                {currentWalletRank && !leaderboard.some((e) => e.isCurrentWallet) && (
-                  <>
-                    <div className="px-4 py-2 text-center text-muted-foreground text-xs">
-                      ...
-                    </div>
-                    <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center bg-primary/10 border-l-2 border-primary">
-                      <div className="col-span-2">
-                        <span className="text-muted-foreground">
-                          #{currentWalletRank.rank}
-                        </span>
+                  {/* Current wallet rank if not in top list */}
+                  {currentWalletRank && !leaderboard.some((e) => e.isCurrentWallet) && (
+                    <>
+                      <div className="px-4 py-2 text-center text-muted-foreground text-xs">
+                        ...
                       </div>
-                      <div className="col-span-5">
-                        <span className="text-sm text-primary">
-                          {formatAddress(currentWalletRank.pubkey)}
-                          <span className="ml-1">(you)</span>
-                        </span>
-                      </div>
-                      <div className="col-span-3 text-right">
-                        <span className="text-foreground font-medium">
-                          {currentWalletRank.balance.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-muted-foreground">
-                          {currentWalletRank.transactionCount}
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                      <motion.div
+                        className="grid grid-cols-12 gap-2 px-4 py-3 items-center bg-primary/10 border-l-2 border-primary"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">
+                            #{currentWalletRank.rank}
+                          </span>
+                        </div>
+                        <div className="col-span-5">
+                          <span className="text-sm text-primary">
+                            {formatAddress(currentWalletRank.pubkey)}
+                            <span className="ml-1">(you)</span>
+                          </span>
+                        </div>
+                        <div className="col-span-3 text-right">
+                          <span className="text-foreground font-medium">
+                            {currentWalletRank.balance.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-muted-foreground">
+                            {currentWalletRank.transactionCount}
+                          </span>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }
