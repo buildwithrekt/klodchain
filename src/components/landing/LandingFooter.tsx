@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
 function XIcon({ className }: { className?: string }) {
@@ -8,7 +9,7 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
-export function Footer() {
+export function LandingFooter() {
   return (
     <footer className="border-t bg-background mt-auto">
       <div className="max-w-7xl px-4 mx-auto py-6">
@@ -28,19 +29,19 @@ export function Footer() {
             </a>
           </div>
           <div className="flex items-center gap-4">
-            <a
-              href="https://klodchain.com/privacy"
+            <Link
+              href="/privacy"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Privacy Policy
-            </a>
+            </Link>
             <Separator orientation="vertical" className="h-4" />
-            <a
-              href="https://klodchain.com/terms"
+            <Link
+              href="/terms"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Terms of Service
-            </a>
+            </Link>
           </div>
         </div>
       </div>

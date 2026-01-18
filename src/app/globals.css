@@ -2,61 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base theme fallback */
-:root {
-  --background: 180 21.0526% 92.5490%;
-  --foreground: 188.8 78.9474% 18.6275%;
-  --card: 180 23.8095% 95.8824%;
-  --card-foreground: 188.8 78.9474% 18.6275%;
-  --popover: 180 23.8095% 95.8824%;
-  --popover-foreground: 188.8 78.9474% 18.6275%;
-  --primary: 183.97 91.8919% 29.0196%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 180 28.8136% 88.4314%;
-  --secondary-foreground: 188.8 78.9474% 18.6275%;
-  --muted: 180 19.2308% 89.8039%;
-  --muted-foreground: 184 31.25% 37.6471%;
-  --accent: 184 38.4615% 84.7059%;
-  --accent-foreground: 188.8 78.9474% 18.6275%;
-  --destructive: 0 62.449% 51.9608%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 185.71 26.5823% 84.5098%;
-  --input: 180 28.8136% 88.4314%;
-  --ring: 183.97 91.8919% 29.0196%;
-  --chart-1: 183.97 91.8919% 29.0196%;
-  --chart-2: 183.53 69.3878% 38.4314%;
-  --chart-3: 183.56 55.102% 48.0392%;
-  --chart-4: 183.72 53.5545% 58.6275%;
-  --chart-5: 183.61 54.9669% 70.3922%;
-  --radius: 0.5rem;
-}
-
-.dark {
-  --background: 196.36 52.381% 8.2353%;
-  --foreground: 180 77.1144% 60.5882%;
-  --card: 192 51.0204% 9.6078%;
-  --card-foreground: 180 77.1144% 60.5882%;
-  --popover: 192 51.0204% 9.6078%;
-  --popover-foreground: 180 77.1144% 60.5882%;
-  --primary: 180 77.1144% 60.5882%;
-  --primary-foreground: 196.36 52.381% 8.2353%;
-  --secondary: 191.43 58.8785% 20.9804%;
-  --secondary-foreground: 180 77.1144% 60.5882%;
-  --muted: 192.86 58.3333% 14.1176%;
-  --muted-foreground: 180 50.6849% 42.9412%;
-  --accent: 191.43 58.8785% 20.9804%;
-  --accent-foreground: 180 77.1144% 60.5882%;
-  --destructive: 0 78.8991% 57.2549%;
-  --destructive-foreground: 0 0% 94.902%;
-  --border: 191.43 58.8785% 20.9804%;
-  --input: 191.43 58.8785% 20.9804%;
-  --ring: 180 77.1144% 60.5882%;
-  --chart-1: 180 77.1144% 60.5882%;
-  --chart-2: 180 50.6849% 42.9412%;
-  --chart-3: 180 50.8197% 35.8824%;
-  --chart-4: 184.35 57.9832% 23.3333%;
-  --chart-5: 185.22 62.1622% 14.5098%;
-}
 
 /* Theme: Monochrome */
 html[data-theme="monochrome"] {
@@ -345,4 +290,18 @@ html[data-theme="t-three"].dark {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Animated gradient */
+@keyframes gradient {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 3s linear infinite;
 }

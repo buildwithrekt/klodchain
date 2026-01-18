@@ -51,7 +51,7 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-2xl">
+    <div className="container mx-auto px-4 py-6 max-w-3xl">
       {/* Back Button */}
       <Link
         href="/wallet"

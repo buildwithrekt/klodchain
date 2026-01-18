@@ -255,7 +255,7 @@ export default function WalletPage() {
   // Loading state with skeletons
   if (isPageLoading && walletAddress) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-xl">
+      <div className="container mx-auto px-4 py-6 max-w-3xl">
         {/* Balance Skeleton */}
         <Card className="mb-4">
           <CardContent className="py-6 text-center">
@@ -330,7 +330,7 @@ export default function WalletPage() {
   // Not connected - Show create/import view
   if (!walletAddress) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-xl">
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
         <Card className="mb-6">
           <CardContent className="py-8 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-muted flex items-center justify-center">
@@ -399,7 +399,7 @@ export default function WalletPage() {
 
   // Connected - Show dashboard
   return (
-    <div className="container mx-auto px-4 py-6 max-w-xl">
+    <div className="container mx-auto px-4 py-6 max-w-3xl">
       {/* Balance Card */}
       <Card className="mb-4">
         <CardContent className="py-6 text-center">

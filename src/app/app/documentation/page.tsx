@@ -375,7 +375,7 @@ export default function ApiDocsPage() {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://klodchain.vercel.app";
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>

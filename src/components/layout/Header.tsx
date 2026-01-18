@@ -32,8 +32,7 @@ const NAV_LINKS = [
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/deploy", label: "Deploy Agent", icon: Bot },
-  { href: "/api-docs", label: "API", icon: Code },
-  { href: "/roadmap", label: "Roadmap", icon: Map },
+  { href: "/documentation", label: "API", icon: Code },
 ];
 
 export function Header() {

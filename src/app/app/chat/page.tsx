@@ -3,7 +3,7 @@ import { MessageCircle } from "lucide-react";
 
 export default function ChatPage() {
   return (
-    <div className="container mx-auto px-4 py-6 max-w-2xl">
+    <div className="container mx-auto px-4 py-6 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <MessageCircle className="h-6 w-6 text-primary" />

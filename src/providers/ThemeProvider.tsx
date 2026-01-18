@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-export type Theme = "default" | "monochrome" | "bubblegum" | "coffee" | "twitter" | "t-three";
+export type Theme = "monochrome" | "bubblegum" | "coffee" | "twitter" | "t-three";
 export type ColorMode = "light" | "dark";
 
 interface ThemeContextType {
@@ -16,7 +16,6 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const THEMES: { value: Theme; label: string; color: string }[] = [
-  { value: "default", label: "Klodchain", color: "#0d9488" },
   { value: "monochrome", label: "Monochrome", color: "#171717" },
   { value: "bubblegum", label: "Bubblegum", color: "#d946a8" },
   { value: "coffee", label: "Coffee", color: "#d97706" },
@@ -25,7 +24,7 @@ export const THEMES: { value: Theme; label: string; color: string }[] = [
 ];
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("default");
+  const [theme, setThemeState] = useState<Theme>("monochrome");
   const [colorMode, setColorModeState] = useState<ColorMode>("dark");
   const [mounted, setMounted] = useState(false);
 

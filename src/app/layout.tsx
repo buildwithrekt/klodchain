@@ -3,8 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { Toaster } from "sonner";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { WalletProvider } from "@/providers/WalletProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 
@@ -30,11 +28,11 @@ export const metadata: Metadata = {
   ],
   creator: "buildwithrekt",
   publisher: "klodchain",
-  metadataBase: new URL("https://klodchain.vercel.app"),
+  metadataBase: new URL("https://klodchain.com"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://klodchain.vercel.app",
+    url: "https://klodchain.com",
     siteName: "klodchain",
     title: "klodchain - autonomous blockchain designed by claude",
     description:
@@ -52,7 +50,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "klodchain - autonomous blockchain designed by claude",
     description:
-    "Blockchain powered by 6 autonomous KLOD agents. Real-time block production and consensus visualization.",
+      "Blockchain powered by 6 autonomous KLOD agents. Real-time block production and consensus visualization.",
     images: ["/assets/og-image.png"],
     creator: "@buildwithrekt",
   },
@@ -81,15 +79,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" data-theme="default" suppressHydrationWarning>
+    <html lang="en" className="dark" data-theme="monochrome" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
           <WalletProvider>
-            <div className="min-h-screen bg-background flex flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
+            {children}
             <Toaster />
           </WalletProvider>
         </ThemeProvider>
