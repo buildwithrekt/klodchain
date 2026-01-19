@@ -548,9 +548,9 @@ export default function TokenDetailPage() {
                 <p className="text-sm text-muted-foreground">Price</p>
                 <p className="text-xl font-bold font-mono">
                   {token.price_usd && token.price_usd > 0
-                    ? `$${token.price_usd < 0.00001 ? token.price_usd.toExponential(2) : token.price_usd.toFixed(6)}`
+                    ? `$${token.price_usd.toFixed(8).replace(/\.?0+$/, '')}`
                     : token.price_sol && token.sol_price
-                    ? `$${(token.price_sol * token.sol_price).toFixed(6)}`
+                    ? `$${(token.price_sol * token.sol_price).toFixed(8).replace(/\.?0+$/, '')}`
                     : "—"}
                 </p>
               </CardContent>
@@ -629,12 +629,12 @@ export default function TokenDetailPage() {
                         domain={["dataMin", "dataMax"]}
                         tickFormatter={(value) => {
                           const usd = value * (token?.sol_price || 200);
-                          return `$${usd < 0.001 ? usd.toExponential(1) : usd.toFixed(4)}`;
+                          return `$${usd.toFixed(6)}`;
                         }}
                         tick={{ fontSize: 10 }}
                         axisLine={false}
                         tickLine={false}
-                        width={70}
+                        width={80}
                       />
                       <Tooltip
                         content={({ active, payload }) => {
@@ -647,7 +647,7 @@ export default function TokenDetailPage() {
                                   {new Date(data.time).toLocaleString()}
                                 </p>
                                 <p className="font-mono font-bold">
-                                  ${priceUsd < 0.00001 ? priceUsd.toExponential(2) : priceUsd.toFixed(6)}
+                                  ${priceUsd.toFixed(8).replace(/\.?0+$/, '')}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   Vol: ${(data.volume * (token?.sol_price || 200)).toFixed(2)}
