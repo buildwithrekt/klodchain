@@ -86,7 +86,6 @@ interface TokenDetails {
   market_cap_usd: number | null;
   virtual_sol_reserves: number | null;
   virtual_token_reserves: number | null;
-  total_supply: number | null;
   is_graduated: boolean;
   raydium_pool: string | null;
   creator_wallet: string;
@@ -789,9 +788,7 @@ export default function TokenDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Supply</p>
-                      <p className="font-mono">
-                        {formatNumber(token.total_supply ? token.total_supply / 1e6 : 1_000_000_000)}
-                      </p>
+                      <p className="font-mono">1,000,000,000</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Creator</p>
@@ -959,7 +956,7 @@ export default function TokenDetailPage() {
               {tradeAmount && parseFloat(tradeAmount) > 0 && token.price_sol && (
                 <div className="p-3 rounded-lg border">
                   <p className="text-sm text-muted-foreground">
-                    Estimated output (before slippage)
+                    Estimated output
                   </p>
                   <p className="text-lg font-bold font-mono">
                     {tradeType === "buy"
