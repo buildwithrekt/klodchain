@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 
 # Run grinder
 CMD ["npx", "tsx", "vanity-grind.ts"]
