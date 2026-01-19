@@ -2,12 +2,11 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy everything needed
-COPY package.json package-lock.json tsconfig.json ./
-COPY scripts/vanity-grind.ts ./scripts/
+# Copy files
+COPY package.json package-lock.json tsconfig.json vanity-grind.ts ./
 
 # Install dependencies
 RUN npm ci --ignore-scripts
 
-# Run with tsx
-CMD ["npx", "tsx", "scripts/vanity-grind.ts"]
+# Run grinder
+CMD ["npx", "tsx", "vanity-grind.ts"]
