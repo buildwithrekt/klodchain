@@ -93,9 +93,7 @@ interface TokenDetails {
   twitter_url: string | null;
   website_url: string | null;
   telegram_url: string | null;
-  reply_count: number | null;
   created_at: string;
-  pumpfun_url: string;
   recent_trades: TokenTrade[];
 }
 
@@ -518,13 +516,13 @@ export default function TokenDetailPage() {
             </a>
           )}
           <a
-            href={token.pumpfun_url}
+            href={`https://dexscreener.com/solana/${address}`}
             target="_blank"
             rel="noopener noreferrer"
           >
             <Button variant="outline" size="sm" className="gap-2">
               <ExternalLink className="h-4 w-4" />
-              Pump.fun
+              DexScreener
             </Button>
           </a>
           <a
@@ -562,30 +560,8 @@ export default function TokenDetailPage() {
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Market Cap</p>
                 <p className="text-xl font-bold font-mono">
-                  {token.market_cap_sol && token.market_cap_sol > 0
-                    ? formatNumber(token.market_cap_sol)
-                    : lastTrade?.marketCapSol
-                    ? formatNumber(lastTrade.marketCapSol)
-                    : "—"}
-                </p>
-                <p className="text-xs text-muted-foreground">SOL</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <p className="text-sm text-muted-foreground">MCap USD</p>
-                <p className="text-xl font-bold font-mono">
                   ${formatNumber(token.market_cap_usd)}
                 </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <p className="text-sm text-muted-foreground">Replies</p>
-                <p className="text-xl font-bold">
-                  {token.reply_count || 0}
-                </p>
-                <p className="text-xs text-muted-foreground">on Klodchain</p>
               </CardContent>
             </Card>
           </div>
@@ -997,7 +973,7 @@ export default function TokenDetailPage() {
                 <div>
                   <p className="font-medium text-orange-500">Real SOL Transaction</p>
                   <p className="text-muted-foreground">
-                    Trades execute on Solana mainnet via Pump.fun.
+                    Trades execute on Solana mainnet.
                     Make sure you understand the risks.
                   </p>
                 </div>

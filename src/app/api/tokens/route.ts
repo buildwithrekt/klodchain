@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
             return {
               ...token,
               price_sol: priceInSol,
-              // Estimate market cap: price * 1B tokens (standard pump.fun supply)
+              // Estimate market cap: price * 1B tokens (standard supply)
               market_cap_sol: priceInSol * 1_000_000_000,
               market_cap_usd: priceUsd * 1_000_000_000,
             };

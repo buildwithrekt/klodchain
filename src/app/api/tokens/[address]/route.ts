@@ -35,7 +35,7 @@ export async function GET(
     // Try to fetch fresh stats from Birdeye
     let birdeyeData = null;
     try {
-      // Try meme token endpoint first (for pump.fun tokens)
+      // Try meme token endpoint first
       birdeyeData = await birdeye.getMemeTokenDetail(address);
 
       // If not found, try general token overview
@@ -145,7 +145,6 @@ export async function GET(
         price_change_24h: birdeyeData.priceChange24hPercent,
       }),
       recent_trades: recentTrades || [],
-      pumpfun_url: `https://pump.fun/${address}`,
     };
 
     return NextResponse.json({

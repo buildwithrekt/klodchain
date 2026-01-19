@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     }
 
     let balance = 0;
-    let decimals = 6; // Default for pump.fun tokens
+    let decimals = 6; // Default for SPL tokens
     let tokenAccount = null;
 
     if (data.result?.value?.length > 0) {

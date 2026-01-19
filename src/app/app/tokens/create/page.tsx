@@ -144,7 +144,7 @@ export default function CreateTokenPage() {
       const txBuffer = Buffer.from(txBase64, "base64");
       const transaction = VersionedTransaction.deserialize(txBuffer);
 
-      // 4. Sign with mint keypair (required by Pump.fun)
+      // 4. Sign with mint keypair
       transaction.sign([mintKeypair]);
 
       // 5. Sign with user wallet
