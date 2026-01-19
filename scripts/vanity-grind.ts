@@ -7,12 +7,12 @@ dotenv.config();
 const TARGET_SUFFIX = process.argv[2] || "k1od";
 const REPORT_INTERVAL = 100000;
 
-// Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+// Supabase client - accept both naming conventions
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env");
+  console.error("❌ Missing SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
   process.exit(1);
 }
 
