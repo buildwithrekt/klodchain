@@ -906,6 +906,44 @@ export default function TokenDetailPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Quick Amount Buttons */}
+                <div className="flex gap-2">
+                  {tradeType === "buy" ? (
+                    <>
+                      {[0.25, 0.5, 1, 2].map((amount) => (
+                        <Button
+                          key={amount}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-xs"
+                          onClick={() => setTradeAmount(amount.toString())}
+                          disabled={trading}
+                        >
+                          {amount} SOL
+                        </Button>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {[10, 25, 50, 100].map((percent) => (
+                        <Button
+                          key={percent}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-xs"
+                          onClick={() => setTradeAmount(Math.floor(tokenBalance * percent / 100).toString())}
+                          disabled={trading || tokenBalance <= 0}
+                        >
+                          {percent}%
+                        </Button>
+                      ))}
+                    </>
+                  )}
+                </div>
+
                 <Input
                   type="number"
                   placeholder="0.00"
