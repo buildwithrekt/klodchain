@@ -82,7 +82,8 @@ interface TokenDetails {
   description: string | null;
   image_url: string | null;
   price_sol: number | null;
-  market_cap_sol: number | null;
+  price_usd: number | null;
+  sol_price: number;
   market_cap_usd: number | null;
   virtual_sol_reserves: number | null;
   virtual_token_reserves: number | null;
@@ -546,13 +547,12 @@ export default function TokenDetailPage() {
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Price</p>
                 <p className="text-xl font-bold font-mono">
-                  {token.price_sol && token.price_sol > 0
-                    ? formatPrice(token.price_sol)
-                    : lastTrade
-                    ? formatPrice(lastTrade.solAmount / lastTrade.tokenAmount)
+                  {token.price_usd && token.price_usd > 0
+                    ? `$${token.price_usd < 0.00001 ? token.price_usd.toExponential(2) : token.price_usd.toFixed(6)}`
+                    : token.price_sol && token.sol_price
+                    ? `$${(token.price_sol * token.sol_price).toFixed(6)}`
                     : "—"}
                 </p>
-                <p className="text-xs text-muted-foreground">SOL</p>
               </CardContent>
             </Card>
             <Card>
@@ -627,26 +627,30 @@ export default function TokenDetailPage() {
                       />
                       <YAxis
                         domain={["dataMin", "dataMax"]}
-                        tickFormatter={(value) => formatPrice(value)}
+                        tickFormatter={(value) => {
+                          const usd = value * (token?.sol_price || 200);
+                          return `$${usd < 0.001 ? usd.toExponential(1) : usd.toFixed(4)}`;
+                        }}
                         tick={{ fontSize: 10 }}
                         axisLine={false}
                         tickLine={false}
-                        width={60}
+                        width={70}
                       />
                       <Tooltip
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
+                            const priceUsd = data.price * (token?.sol_price || 200);
                             return (
                               <div className="bg-background border rounded-lg p-2 shadow-lg">
                                 <p className="text-xs text-muted-foreground">
                                   {new Date(data.time).toLocaleString()}
                                 </p>
                                 <p className="font-mono font-bold">
-                                  {formatPrice(data.price)} SOL
+                                  ${priceUsd < 0.00001 ? priceUsd.toExponential(2) : priceUsd.toFixed(6)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  Vol: {data.volume.toFixed(4)} SOL
+                                  Vol: ${(data.volume * (token?.sol_price || 200)).toFixed(2)}
                                 </p>
                               </div>
                             );

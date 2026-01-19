@@ -133,9 +133,11 @@ export async function GET(
     // Merge fresh data with our DB data
     const responseData = {
       ...token,
+      sol_price: solPrice,
       // Override with fresh data if available
       ...(birdeyeData && {
         price_sol: birdeyeData.price / solPrice,
+        price_usd: birdeyeData.price,
         market_cap_sol: birdeyeData.marketCap / solPrice,
         market_cap_usd: birdeyeData.marketCap,
         total_supply: birdeyeData.supply,
