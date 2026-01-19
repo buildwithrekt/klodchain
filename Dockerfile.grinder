@@ -2,8 +2,8 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy files
-COPY package.json package-lock.json tsconfig.json vanity-grind.ts ./
+# Copy everything
+COPY . .
 
 # Install dependencies
 RUN npm ci --ignore-scripts
