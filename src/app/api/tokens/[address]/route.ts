@@ -19,18 +19,11 @@ export async function GET(
     }
 
     // Get token from our DB
-    const { data: token, error: tokenError } = await supabaseAdmin
+    const { data: token } = await supabaseAdmin
       .from("created_tokens")
       .select("*")
       .eq("mint_address", address)
       .single();
-
-    if (tokenError || !token) {
-      return NextResponse.json(
-        { success: false, error: "Token not found" },
-        { status: 404 }
-      );
-    }
 
     // Try to fetch fresh stats from Birdeye
     let birdeyeData = null;
@@ -61,7 +54,7 @@ export async function GET(
         }
       }
 
-      if (birdeyeData) {
+      if (birdeyeData && token) {
         // Get SOL price to convert USD to SOL
         const solPrice = await birdeye.getTokenPrice("So11111111111111111111111111111111111111112");
         const priceInSol = solPrice ? birdeyeData.price / solPrice : 0;
@@ -84,6 +77,14 @@ export async function GET(
     } catch (error) {
       console.error("Failed to fetch from Birdeye:", error);
       // Continue with cached data
+    }
+
+    // If token not in DB and no Birdeye data, return 404
+    if (!token && !birdeyeData) {
+      return NextResponse.json(
+        { success: false, error: "Token not found" },
+        { status: 404 }
+      );
     }
 
     // Fetch recent trades from Birdeye
@@ -147,23 +148,48 @@ export async function GET(
     // Always calculate USD values from SOL if not available
     const priceUsd = birdeyeData
       ? birdeyeData.price
-      : token.price_usd || (token.price_sol ? token.price_sol * solPrice : null);
+      : token?.price_usd || (token?.price_sol ? token.price_sol * solPrice : null);
 
     const marketCapUsd = birdeyeData
       ? birdeyeData.marketCap
-      : token.market_cap_usd || (token.market_cap_sol ? token.market_cap_sol * solPrice : null);
+      : token?.market_cap_usd || (token?.market_cap_sol ? token.market_cap_sol * solPrice : null);
+
+    // Build response from DB token or Birdeye data
+    const baseToken = token || {
+      id: address,
+      mint_address: address,
+      name: birdeyeData?.name || "Unknown",
+      symbol: birdeyeData?.symbol || "???",
+      description: null,
+      image_url: birdeyeData?.logoURI || null,
+      price_sol: null,
+      price_usd: null,
+      market_cap_sol: null,
+      market_cap_usd: null,
+      virtual_sol_reserves: null,
+      virtual_token_reserves: null,
+      is_graduated: false,
+      raydium_pool: null,
+      creator_wallet: "",
+      twitter_url: null,
+      website_url: null,
+      telegram_url: null,
+      created_at: new Date().toISOString(),
+    };
 
     const responseData = {
-      ...token,
+      ...baseToken,
       sol_price: solPrice,
       // Always provide USD values
       price_usd: priceUsd,
       market_cap_usd: marketCapUsd,
       // Override with fresh data if available
       ...(birdeyeData && {
+        name: birdeyeData.name || baseToken.name,
+        symbol: birdeyeData.symbol || baseToken.symbol,
         price_sol: birdeyeData.price / solPrice,
         total_supply: birdeyeData.supply,
-        image_url: birdeyeData.logoURI || token.image_url,
+        image_url: birdeyeData.logoURI || baseToken.image_url,
         holder_count: birdeyeData.holder,
         volume_24h: birdeyeData.volume24h,
         price_change_24h: birdeyeData.priceChange24hPercent,
