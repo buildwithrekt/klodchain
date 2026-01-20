@@ -103,20 +103,33 @@ export async function GET(
       const birdeyeTrades = await birdeye.getTokenTrades({
         address,
         tx_type: "swap",
-        limit: 50,
+        limit: 20,
       });
 
-      recentTrades = birdeyeTrades.map((trade) => ({
-        id: trade.txHash,
-        token_mint: address,
-        trade_type: trade.side,
-        sol_amount: trade.side === "buy" ? trade.from.amount : trade.to.amount,
-        token_amount: trade.side === "buy" ? trade.to.amount : trade.from.amount,
-        trader_wallet: trade.owner,
-        signature: trade.txHash,
-        created_at: new Date(trade.blockUnixTime * 1000).toISOString(),
-        volume_usd: trade.volumeUSD,
-      }));
+      const SOL_ADDRESS = "So11111111111111111111111111111111111111112";
+
+      recentTrades = birdeyeTrades.map((trade) => {
+        // Determine which side is SOL and which is the token
+        const fromIsSol = trade.from.address === SOL_ADDRESS;
+        const solSide = fromIsSol ? trade.from : trade.to;
+        const tokenSide = fromIsSol ? trade.to : trade.from;
+
+        // If SOL is in "from", user spent SOL to get tokens = BUY
+        // If SOL is in "to", user received SOL for tokens = SELL
+        const tradeType = fromIsSol ? "buy" : "sell";
+
+        return {
+          id: trade.txHash,
+          token_mint: address,
+          trade_type: tradeType as "buy" | "sell",
+          sol_amount: solSide.uiAmount * 1e9, // Convert to lamports for consistency
+          token_amount: tokenSide.uiAmount * 1e6, // Assuming 6 decimals for pump.fun tokens
+          trader_wallet: trade.owner,
+          signature: trade.txHash,
+          created_at: new Date(trade.blockUnixTime * 1000).toISOString(),
+          volume_usd: solSide.uiAmount * (solSide.price || 0),
+        };
+      });
     } catch (error) {
       console.error("Failed to fetch trades from Birdeye:", error);
     }
@@ -131,15 +144,24 @@ export async function GET(
     }
 
     // Merge fresh data with our DB data
+    // Always calculate USD values from SOL if not available
+    const priceUsd = birdeyeData
+      ? birdeyeData.price
+      : token.price_usd || (token.price_sol ? token.price_sol * solPrice : null);
+
+    const marketCapUsd = birdeyeData
+      ? birdeyeData.marketCap
+      : token.market_cap_usd || (token.market_cap_sol ? token.market_cap_sol * solPrice : null);
+
     const responseData = {
       ...token,
       sol_price: solPrice,
+      // Always provide USD values
+      price_usd: priceUsd,
+      market_cap_usd: marketCapUsd,
       // Override with fresh data if available
       ...(birdeyeData && {
         price_sol: birdeyeData.price / solPrice,
-        price_usd: birdeyeData.price,
-        market_cap_sol: birdeyeData.marketCap / solPrice,
-        market_cap_usd: birdeyeData.marketCap,
         total_supply: birdeyeData.supply,
         image_url: birdeyeData.logoURI || token.image_url,
         holder_count: birdeyeData.holder,

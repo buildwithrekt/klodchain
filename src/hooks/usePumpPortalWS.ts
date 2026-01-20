@@ -112,7 +112,13 @@ export function usePumpPortalWS({
             };
 
             setLastTrade(trade);
-            setTrades((prev) => [trade, ...prev].slice(0, 100));
+            // Deduplicate by signature
+            setTrades((prev) => {
+              if (prev.some((t) => t.signature === trade.signature)) {
+                return prev;
+              }
+              return [trade, ...prev].slice(0, 100);
+            });
             onTrade?.(trade);
           }
 

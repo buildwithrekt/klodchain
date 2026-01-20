@@ -132,8 +132,14 @@ export default function TokenDetailPage() {
 
   // Real-time WebSocket connection
   const handleRealtimeTrade = useCallback((trade: PumpPortalTrade) => {
-    // Update real-time trades list
-    setRealtimeTrades((prev) => [trade, ...prev].slice(0, 20));
+    // Update real-time trades list (deduplicate by signature)
+    setRealtimeTrades((prev) => {
+      // Check if trade already exists
+      if (prev.some((t) => t.signature === trade.signature)) {
+        return prev;
+      }
+      return [trade, ...prev].slice(0, 20);
+    });
 
     const price = trade.solAmount / trade.tokenAmount;
 
@@ -233,7 +239,7 @@ export default function TokenDetailPage() {
   const fetchToken = async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch(`/api/tokens/${address}`);
+      const res = await fetch(`/api/tokens/${address}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setToken(data.data);
@@ -248,7 +254,7 @@ export default function TokenDetailPage() {
   // Fetch chart data
   const fetchChartData = async () => {
     try {
-      const res = await fetch(`/api/tokens/${address}/chart?interval=${chartInterval}`);
+      const res = await fetch(`/api/tokens/${address}/chart?interval=${chartInterval}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success && data.data) {
         setChartData(data.data);
@@ -559,7 +565,17 @@ export default function TokenDetailPage() {
               <CardContent className="pt-4">
                 <p className="text-sm text-muted-foreground">Market Cap</p>
                 <p className="text-xl font-bold font-mono">
-                  ${formatNumber(token.market_cap_usd)}
+                  ${formatNumber(
+                    token.market_cap_usd && token.market_cap_usd > 0
+                      ? token.market_cap_usd
+                      : token.market_cap_sol && token.sol_price
+                      ? token.market_cap_sol * token.sol_price
+                      : token.price_usd && token.price_usd > 0
+                      ? token.price_usd * 1_000_000_000
+                      : token.price_sol && token.sol_price
+                      ? token.price_sol * token.sol_price * 1_000_000_000
+                      : null
+                  )}
                 </p>
               </CardContent>
             </Card>
@@ -935,7 +951,13 @@ export default function TokenDetailPage() {
                           variant="outline"
                           size="sm"
                           className="flex-1 text-xs"
-                          onClick={() => setTradeAmount(Math.floor(tokenBalance * percent / 100).toString())}
+                          onClick={() => {
+                            if (percent === 100) {
+                              setTradeAmount(tokenBalance.toString());
+                            } else {
+                              setTradeAmount(Math.floor(tokenBalance * percent / 100).toString());
+                            }
+                          }}
                           disabled={trading || tokenBalance <= 0}
                         >
                           {percent}%
@@ -998,7 +1020,7 @@ export default function TokenDetailPage() {
 
               {/* Price Info */}
               <div className="text-center text-sm text-muted-foreground space-y-1">
-                <p>Price: {formatPrice(token.price_sol)} SOL</p>
+                <p>Price: ${token.price_usd ? token.price_usd.toFixed(8).replace(/\.?0+$/, '') : (token.price_sol && token.sol_price ? (token.price_sol * token.sol_price).toFixed(8).replace(/\.?0+$/, '') : '—')}</p>
                 <p className="text-xs">5% max slippage</p>
               </div>
             </CardContent>

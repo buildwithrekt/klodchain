@@ -413,7 +413,7 @@ export default function CreateTokenPage() {
               <div>
                 <p className="font-medium">Klodchain Address</p>
                 <p className="text-sm text-muted-foreground">
-                  Your token address will end in &quot;klod&quot;
+                  Your token address will end in &quot;KLD&quot;
                 </p>
               </div>
             </div>

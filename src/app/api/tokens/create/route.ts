@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 async function getVanityKeypair(): Promise<{ publicKey: string; secretKey: string } | null> {
   // Use the SQL function to atomically get and reserve a keypair
   const { data, error } = await supabaseAdmin.rpc("get_next_vanity_keypair", {
-    target_suffix: "klod",
+    target_suffix: "KLD",
   });
 
   if (error || !data || data.length === 0) {

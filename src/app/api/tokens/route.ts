@@ -51,13 +51,21 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Get SOL price first
+    let solPrice = 200; // Default fallback
+    try {
+      const price = await birdeye.getTokenPrice("So11111111111111111111111111111111111111112");
+      if (price) solPrice = price;
+    } catch {
+      // Use fallback
+    }
+
     // Get fresh prices from Birdeye for all tokens
     let enrichedTokens = tokens || [];
     try {
       const addresses = (tokens || []).map((t) => t.mint_address);
       if (addresses.length > 0) {
         const prices = await birdeye.getMultipleTokenPrices(addresses);
-        const solPrice = await birdeye.getTokenPrice("So11111111111111111111111111111111111111112") || 200;
 
         enrichedTokens = (tokens || []).map((token) => {
           const priceUsd = prices.get(token.mint_address);
@@ -65,18 +73,32 @@ export async function GET(req: NextRequest) {
             const priceInSol = priceUsd / solPrice;
             return {
               ...token,
+              sol_price: solPrice,
               price_sol: priceInSol,
+              price_usd: priceUsd,
               // Estimate market cap: price * 1B tokens (standard supply)
               market_cap_sol: priceInSol * 1_000_000_000,
               market_cap_usd: priceUsd * 1_000_000_000,
             };
           }
-          return token;
+          // If no Birdeye price, calculate USD from SOL values
+          return {
+            ...token,
+            sol_price: solPrice,
+            price_usd: token.price_sol ? token.price_sol * solPrice : null,
+            market_cap_usd: token.market_cap_sol ? token.market_cap_sol * solPrice : null,
+          };
         });
       }
     } catch (error) {
       console.error("Failed to fetch prices from Birdeye:", error);
-      // Continue with DB data
+      // Still add sol_price to all tokens
+      enrichedTokens = (tokens || []).map((token) => ({
+        ...token,
+        sol_price: solPrice,
+        price_usd: token.price_sol ? token.price_sol * solPrice : null,
+        market_cap_usd: token.market_cap_sol ? token.market_cap_sol * solPrice : null,
+      }));
     }
 
     return NextResponse.json({

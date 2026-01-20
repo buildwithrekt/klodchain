@@ -46,8 +46,10 @@ interface CreatedToken {
   description: string | null;
   image_url: string | null;
   price_sol: number | null;
+  price_usd: number | null;
   market_cap_sol: number | null;
   market_cap_usd: number | null;
+  sol_price: number;
   is_graduated: boolean;
   creator_wallet: string;
   created_at: string;
@@ -280,13 +282,13 @@ export default function TokensPage() {
                       <div>
                         <p className="text-muted-foreground text-xs">Price</p>
                         <p className="font-mono font-medium">
-                          {formatPrice(token.price_sol)} SOL
+                          ${formatPrice(token.price_usd ?? (token.price_sol && token.sol_price ? token.price_sol * token.sol_price : null))}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">MCap</p>
                         <p className="font-mono font-medium">
-                          {formatMarketCap(token.market_cap_sol)} SOL
+                          ${formatMarketCap(token.market_cap_usd ?? (token.market_cap_sol && token.sol_price ? token.market_cap_sol * token.sol_price : null))}
                         </p>
                       </div>
                     </div>

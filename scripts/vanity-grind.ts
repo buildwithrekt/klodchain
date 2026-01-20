@@ -4,7 +4,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const TARGET_SUFFIX = process.argv[2] || "k1od";
+const TARGET_SUFFIX = process.argv[2] || "KLD";
 const REPORT_INTERVAL = 100000;
 
 // Supabase client - accept both naming conventions

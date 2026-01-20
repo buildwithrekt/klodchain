@@ -107,17 +107,15 @@ class BirdeyeClient {
 
   /**
    * Get single meme token details
-   * Endpoint: GET /defi/v3/token/meme/single
+   * Endpoint: GET /defi/v3/token/detail/meme/single
    */
   async getMemeTokenDetail(address: string): Promise<BirdeyeMemeToken | null> {
+    const url = `${BIRDEYE_API}/defi/v3/token/meme/detail/single?address=${address}`;
     try {
-      const response = await fetch(
-        `${BIRDEYE_API}/defi/v3/token/meme/single?address=${address}`,
-        { headers: this.headers }
-      );
+      const response = await fetch(url, { headers: this.headers });
 
       if (!response.ok) {
-        console.error(`Birdeye API error: ${response.status}`);
+        console.error(`Birdeye API error: ${response.status} - ${url}`);
         return null;
       }
 
@@ -183,14 +181,12 @@ class BirdeyeClient {
    * Endpoint: GET /defi/token_overview
    */
   async getTokenOverview(address: string): Promise<BirdeyeTokenInfo | null> {
+    const url = `${BIRDEYE_API}/defi/token_overview?address=${address}`;
     try {
-      const response = await fetch(
-        `${BIRDEYE_API}/defi/token_overview?address=${address}`,
-        { headers: this.headers }
-      );
+      const response = await fetch(url, { headers: this.headers });
 
       if (!response.ok) {
-        console.error(`Birdeye API error: ${response.status}`);
+        console.error(`Birdeye API error: ${response.status} - ${url}`);
         return null;
       }
 
@@ -377,23 +373,21 @@ class BirdeyeClient {
       const searchParams = new URLSearchParams();
       searchParams.set("address", params.address);
       searchParams.set("tx_type", params.tx_type || "swap");
-      if (params.limit) searchParams.set("limit", params.limit.toString());
-      if (params.offset) searchParams.set("offset", params.offset.toString());
+      searchParams.set("sort_type", "desc");
+      searchParams.set("offset", (params.offset || 0).toString());
+      searchParams.set("limit", (params.limit || 20).toString());
 
-      const response = await fetch(
-        `${BIRDEYE_API}/defi/txs/token?${searchParams}`,
-        { headers: this.headers }
-      );
+      const url = `${BIRDEYE_API}/defi/txs/token?${searchParams}`;
+      const response = await fetch(url, { headers: this.headers });
 
       if (!response.ok) {
-        console.error(`Birdeye trades API error: ${response.status}`);
+        console.error(`Birdeye API error: ${response.status} - ${url}`);
         return [];
       }
 
       const result: BirdeyeResponse<{ items: BirdeyeTrade[] }> = await response.json();
 
       if (!result.success || !result.data?.items) {
-        console.error(`Birdeye trades API error: ${result.message}`);
         return [];
       }
 
