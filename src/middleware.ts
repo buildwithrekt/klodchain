@@ -24,6 +24,15 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith("/app")) {
       return NextResponse.next();
     }
+
+    // Handle /accounts/xxx -> /app/explorer/account/xxx
+    if (pathname.startsWith("/accounts/")) {
+      const pubkey = pathname.replace("/accounts/", "");
+      const url = request.nextUrl.clone();
+      url.pathname = `/app/explorer/account/${pubkey}`;
+      return NextResponse.rewrite(url);
+    }
+
     // Root on localhost shows the app (dashboard)
     const url = request.nextUrl.clone();
     url.pathname = `/app${pathname}`;
@@ -38,6 +47,15 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith("/app")) {
       return NextResponse.next();
     }
+
+    // Handle /accounts/xxx -> /app/explorer/account/xxx
+    if (pathname.startsWith("/accounts/")) {
+      const pubkey = pathname.replace("/accounts/", "");
+      const url = request.nextUrl.clone();
+      url.pathname = `/app/explorer/account/${pubkey}`;
+      return NextResponse.rewrite(url);
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = `/app${pathname}`;
     return NextResponse.rewrite(url);
