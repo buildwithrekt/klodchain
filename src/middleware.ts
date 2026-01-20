@@ -59,6 +59,10 @@ export function middleware(request: NextRequest) {
 
   // App domain: app.klodchain.com -> serves /app routes
   if (isAppDomain) {
+    // Don't double-prefix if already starts with /app
+    if (pathname.startsWith("/app")) {
+      return NextResponse.next();
+    }
     const url = request.nextUrl.clone();
     url.pathname = `/app${pathname}`;
     return NextResponse.rewrite(url);
