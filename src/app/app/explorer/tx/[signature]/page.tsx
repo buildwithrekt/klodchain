@@ -334,35 +334,6 @@ export default function TransactionDetailPage() {
           </Card>
         )}
 
-        {/* External Links */}
-        <Card>
-          <CardHeader>
-            <CardTitle>View on External Explorers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <a
-                href={`https://solscan.io/tx/${tx.signature}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                <span>View on Solscan</span>
-              </a>
-              <a
-                href={`https://explorer.solana.com/tx/${tx.signature}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                <span>Solana Explorer</span>
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Raw Data */}
         {tx.instruction_data && (
           <Card>
