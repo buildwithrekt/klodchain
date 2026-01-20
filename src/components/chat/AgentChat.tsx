@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ interface Message {
   content: string;
   agentName?: string;
   timestamp: Date;
+  isTyping?: boolean;
 }
 
 interface ChatHistory {
@@ -29,6 +30,81 @@ const AGENTS = [
   { value: "oracle", name: "SAGE", role: "Data Oracle", gender: "F" },
 ];
 
+// Typewriter component for streaming text display
+function TypewriterText({
+  text,
+  isTyping,
+  onComplete,
+  audioDuration
+}: {
+  text: string;
+  isTyping: boolean;
+  onComplete?: () => void;
+  audioDuration?: number;
+}) {
+  const [displayedText, setDisplayedText] = useState(isTyping ? "" : text);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!isTyping) {
+      setDisplayedText(text);
+      return;
+    }
+
+    // Calculate typing speed based on audio duration or default
+    // Average speaking rate is ~150 words per minute = 2.5 words/sec
+    // Average word length is ~5 chars, so ~12.5 chars/sec
+    const totalChars = text.length;
+    let charDelay: number;
+
+    if (audioDuration && audioDuration > 0) {
+      // Sync with audio duration (leave 200ms buffer at the end)
+      charDelay = Math.max(10, ((audioDuration - 0.2) * 1000) / totalChars);
+    } else {
+      // Default: ~12-15 chars per second for natural feel
+      charDelay = 70;
+    }
+
+    let currentIndex = 0;
+    setDisplayedText("");
+
+    intervalRef.current = setInterval(() => {
+      if (currentIndex < totalChars) {
+        // Add 1-3 characters at a time for smoother feel
+        const charsToAdd = Math.min(
+          Math.ceil(Math.random() * 2) + 1,
+          totalChars - currentIndex
+        );
+        currentIndex += charsToAdd;
+        setDisplayedText(text.slice(0, currentIndex));
+      } else {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        onComplete?.();
+      }
+    }, charDelay);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [text, isTyping, audioDuration, onComplete]);
+
+  // Show cursor while typing
+  return (
+    <span>
+      {displayedText}
+      {isTyping && displayedText.length < text.length && (
+        <span className="animate-pulse">▊</span>
+      )}
+    </span>
+  );
+}
+
 export function AgentChat() {
   const [chatHistory, setChatHistory] = useState<ChatHistory>({});
   const [input, setInput] = useState("");
@@ -37,6 +113,8 @@ export function AgentChat() {
   const [error, setError] = useState<string | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -48,7 +126,7 @@ export function AgentChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, typingMessageId]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -60,9 +138,24 @@ export function AgentChat() {
     };
   }, []);
 
-  const playTextToSpeech = async (text: string, agentRole: string) => {
-    if (!voiceEnabled) return;
+  const markTypingComplete = useCallback((messageId: string) => {
+    setTypingMessageId(null);
+    setChatHistory((prev) => {
+      const agentMessages = prev[selectedAgent] || [];
+      return {
+        ...prev,
+        [selectedAgent]: agentMessages.map((msg) =>
+          msg.id === messageId ? { ...msg, isTyping: false } : msg
+        ),
+      };
+    });
+  }, [selectedAgent]);
 
+  const playTextToSpeechWithSync = async (
+    text: string,
+    agentRole: string,
+    messageId: string
+  ): Promise<void> => {
     try {
       setIsPlayingAudio(true);
 
@@ -80,6 +173,8 @@ export function AgentChat() {
 
       if (!response.ok) {
         console.error("TTS failed");
+        // If TTS fails, just show text immediately
+        markTypingComplete(messageId);
         return;
       }
 
@@ -89,20 +184,36 @@ export function AgentChat() {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
+      // Wait for metadata to get duration
+      await new Promise<void>((resolve) => {
+        audio.onloadedmetadata = () => {
+          setAudioDuration(audio.duration);
+          resolve();
+        };
+        // Fallback if metadata doesn't load
+        setTimeout(resolve, 100);
+      });
+
       audio.onended = () => {
         setIsPlayingAudio(false);
+        setTypingMessageId(null);
+        markTypingComplete(messageId);
         URL.revokeObjectURL(audioUrl);
       };
 
       audio.onerror = () => {
         setIsPlayingAudio(false);
+        setTypingMessageId(null);
+        markTypingComplete(messageId);
         URL.revokeObjectURL(audioUrl);
       };
 
+      // Start audio - typewriter effect starts simultaneously
       await audio.play();
     } catch (err) {
       console.error("Error playing TTS:", err);
       setIsPlayingAudio(false);
+      markTypingComplete(messageId);
     }
   };
 
@@ -141,12 +252,16 @@ export function AgentChat() {
         return;
       }
 
+      const messageId = (Date.now() + 1).toString();
+      const shouldAnimate = voiceEnabled;
+
       const agentMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: messageId,
         role: "agent",
         content: data.reply,
         agentName: data.agent.name,
         timestamp: new Date(),
+        isTyping: shouldAnimate,
       };
 
       setChatHistory((prev) => ({
@@ -154,9 +269,10 @@ export function AgentChat() {
         [selectedAgent]: [...(prev[selectedAgent] || []), agentMessage],
       }));
 
-      // Play TTS for agent response
+      // Play TTS and sync text display
       if (voiceEnabled) {
-        playTextToSpeech(data.reply, selectedAgent);
+        setTypingMessageId(messageId);
+        playTextToSpeechWithSync(data.reply, selectedAgent, messageId);
       }
     } catch (err) {
       setError("Failed to connect to agent");
@@ -177,6 +293,11 @@ export function AgentChat() {
       audioRef.current.pause();
       audioRef.current = null;
       setIsPlayingAudio(false);
+      setTypingMessageId(null);
+      // Complete any typing message immediately
+      if (typingMessageId) {
+        markTypingComplete(typingMessageId);
+      }
     }
     setVoiceEnabled(!voiceEnabled);
   };
@@ -253,7 +374,18 @@ export function AgentChat() {
                       {msg.agentName}
                     </p>
                   )}
-                  <p className="text-sm">{msg.content}</p>
+                  <p className="text-sm">
+                    {msg.role === "agent" && msg.isTyping ? (
+                      <TypewriterText
+                        text={msg.content}
+                        isTyping={msg.id === typingMessageId}
+                        audioDuration={audioDuration}
+                        onComplete={() => markTypingComplete(msg.id)}
+                      />
+                    ) : (
+                      msg.content
+                    )}
+                  </p>
                 </div>
               </div>
             ))}
