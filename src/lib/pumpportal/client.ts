@@ -7,6 +7,30 @@ import {
 
 const PUMPPORTAL_API = "https://pumpportal.fun/api";
 const PUMPFUN_IPFS_API = "https://pump.fun/api";
+const PUMPFUN_API = "https://frontend-api.pump.fun";
+
+export interface PumpFunTokenInfo {
+  mint: string;
+  name: string;
+  symbol: string;
+  description: string;
+  image_uri: string;
+  metadata_uri: string;
+  twitter: string | null;
+  telegram: string | null;
+  website: string | null;
+  bonding_curve: string;
+  associated_bonding_curve: string;
+  creator: string;
+  created_timestamp: number;
+  raydium_pool: string | null;
+  complete: boolean;
+  virtual_sol_reserves: number;
+  virtual_token_reserves: number;
+  total_supply: number;
+  market_cap: number;
+  usd_market_cap: number;
+}
 
 export class PumpPortalClient {
   /**
@@ -131,6 +155,21 @@ export class PumpPortalClient {
     const arrayBuffer = await response.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
     return base64;
+  }
+
+  /**
+   * Get token info from pump.fun
+   */
+  async getTokenInfo(mint: string): Promise<PumpFunTokenInfo> {
+    const response = await fetch(`${PUMPFUN_API}/coins/${mint}`, {
+      headers: { "Accept": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch token info: ${response.status}`);
+    }
+
+    return response.json();
   }
 
 }

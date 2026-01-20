@@ -84,6 +84,7 @@ interface TokenDetails {
   price_sol: number | null;
   price_usd: number | null;
   sol_price: number;
+  market_cap_sol: number | null;
   market_cap_usd: number | null;
   virtual_sol_reserves: number | null;
   virtual_token_reserves: number | null;
