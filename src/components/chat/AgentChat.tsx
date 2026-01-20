@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, Loader2, AlertCircle } from "lucide-react";
+import { Send, Loader2, AlertCircle, Volume2, VolumeX } from "lucide-react";
 
 interface Message {
   id: string;
@@ -21,12 +21,12 @@ interface ChatHistory {
 }
 
 const AGENTS = [
-  { value: "validator", name: "VEX", role: "Block Producer" },
-  { value: "architect", name: "ARC", role: "Network Design" },
-  { value: "analyst", name: "SCAN", role: "Chain Monitor" },
-  { value: "reviewer", name: "FLUX", role: "TX Processor" },
-  { value: "consensus", name: "SYNC", role: "Consensus" },
-  { value: "oracle", name: "SAGE", role: "Data Oracle" },
+  { value: "validator", name: "VEX", role: "Block Producer", gender: "M" },
+  { value: "architect", name: "ARC", role: "Network Design", gender: "F" },
+  { value: "analyst", name: "SCAN", role: "Chain Monitor", gender: "M" },
+  { value: "reviewer", name: "FLUX", role: "TX Processor", gender: "F" },
+  { value: "consensus", name: "SYNC", role: "Consensus", gender: "M" },
+  { value: "oracle", name: "SAGE", role: "Data Oracle", gender: "F" },
 ];
 
 export function AgentChat() {
@@ -35,7 +35,10 @@ export function AgentChat() {
   const [selectedAgent, setSelectedAgent] = useState("validator");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const selectedAgentInfo = AGENTS.find((a) => a.value === selectedAgent)!;
   const messages = chatHistory[selectedAgent] || [];
@@ -46,6 +49,62 @@ export function AgentChat() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const playTextToSpeech = async (text: string, agentRole: string) => {
+    if (!voiceEnabled) return;
+
+    try {
+      setIsPlayingAudio(true);
+
+      // Stop any currently playing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, agentRole }),
+      });
+
+      if (!response.ok) {
+        console.error("TTS failed");
+        return;
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.error("Error playing TTS:", err);
+      setIsPlayingAudio(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -94,6 +153,11 @@ export function AgentChat() {
         ...prev,
         [selectedAgent]: [...(prev[selectedAgent] || []), agentMessage],
       }));
+
+      // Play TTS for agent response
+      if (voiceEnabled) {
+        playTextToSpeech(data.reply, selectedAgent);
+      }
     } catch (err) {
       setError("Failed to connect to agent");
     } finally {
@@ -108,25 +172,54 @@ export function AgentChat() {
     }
   };
 
+  const toggleVoice = () => {
+    if (voiceEnabled && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsPlayingAudio(false);
+    }
+    setVoiceEnabled(!voiceEnabled);
+  };
+
   return (
     <Card className="flex flex-col h-[600px]">
       {/* Agent Tabs */}
       <div className="border-b p-3">
-        <Tabs value={selectedAgent} onValueChange={setSelectedAgent}>
-          <TabsList className="grid grid-cols-6 w-full">
-            {AGENTS.map((agent) => (
-              <TabsTrigger
-                key={agent.value}
-                value={agent.value}
-                className="text-xs"
-              >
-                {agent.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <p className="text-xs text-muted-foreground mt-2">
+        <div className="flex items-center justify-between mb-2">
+          <Tabs value={selectedAgent} onValueChange={setSelectedAgent} className="flex-1">
+            <TabsList className="grid grid-cols-6 w-full">
+              {AGENTS.map((agent) => (
+                <TabsTrigger
+                  key={agent.value}
+                  value={agent.value}
+                  className="text-xs"
+                >
+                  {agent.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <Button
+            variant={voiceEnabled ? "default" : "outline"}
+            size="sm"
+            className="ml-2 shrink-0 gap-2"
+            onClick={toggleVoice}
+          >
+            {voiceEnabled ? (
+              <Volume2 className={`h-4 w-4 ${isPlayingAudio ? "animate-pulse" : ""}`} />
+            ) : (
+              <VolumeX className="h-4 w-4" />
+            )}
+            <span className="text-xs">Voice {voiceEnabled ? "ON" : "OFF"}</span>
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
           <span className="text-primary font-medium">{selectedAgentInfo.name}</span> — {selectedAgentInfo.role}
+          {voiceEnabled && (
+            <span className="ml-2 text-primary">
+              (Voice: {selectedAgentInfo.gender === "M" ? "Masculine" : "Feminine"})
+            </span>
+          )}
         </p>
       </div>
 
@@ -138,6 +231,9 @@ export function AgentChat() {
               <div className="text-center text-muted-foreground py-8">
                 <p className="text-sm">Start a conversation with {selectedAgentInfo.name}</p>
                 <p className="text-xs mt-1">Ask about the network, blocks, transactions...</p>
+                {voiceEnabled && (
+                  <p className="text-xs mt-2 text-primary">Voice mode enabled - agent will speak responses</p>
+                )}
               </div>
             )}
             {messages.map((msg) => (

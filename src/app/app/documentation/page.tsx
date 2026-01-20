@@ -77,8 +77,8 @@ const endpoints: Endpoint[] = [
       {
         "signature": "sig123...",
         "transaction_type": "transfer",
-        "from_pubkey": "klod_abc",
-        "to_pubkey": "klod_xyz",
+        "from_pubkey": "abc...",
+        "to_pubkey": "xyz...",
         "amount": 100000000,
         "fee": 5000,
         "status": "confirmed"
@@ -94,7 +94,7 @@ const endpoints: Endpoint[] = [
     queryParams: [
       { name: "limit", type: "number", description: "Number of transactions to return (max 100)", default: "20" },
       { name: "offset", type: "number", description: "Number of transactions to skip", default: "0" },
-      { name: "type", type: "string", description: "Filter by transaction type (transfer, token_transfer, faucet_claim, etc.)" },
+      { name: "type", type: "string", description: "Filter by transaction type (transfer, token_transfer, etc.)" },
       { name: "status", type: "string", description: "Filter by status (pending, confirmed, failed)" },
       { name: "from", type: "string", description: "Filter by sender pubkey" },
       { name: "to", type: "string", description: "Filter by recipient pubkey" },
@@ -107,8 +107,8 @@ const endpoints: Endpoint[] = [
       "signature": "sig123...",
       "slot": 12345,
       "transaction_type": "transfer",
-      "from_pubkey": "klod_abc",
-      "to_pubkey": "klod_xyz",
+      "from_pubkey": "abc...",
+      "to_pubkey": "xyz...",
       "amount": 100000000,
       "fee": 5000,
       "status": "confirmed",
@@ -135,43 +135,14 @@ const endpoints: Endpoint[] = [
     "signature": "sig123...",
     "slot": 12345,
     "block_index": 0,
-    "transaction_type": "token_transfer",
-    "from_pubkey": "klod_abc",
-    "to_pubkey": "klod_xyz",
+    "transaction_type": "transfer",
+    "from_pubkey": "abc...",
+    "to_pubkey": "xyz...",
     "amount": 100000000,
-    "fee": 0,
+    "fee": 5000,
     "status": "confirmed",
-    "program_id": "11111111111111111111111111111111",
-    "instruction_data": {
-      "type": "token_transfer",
-      "amount": 100,
-      "sender": "klod_abc",
-      "recipient": "klod_xyz"
-    },
     "created_at": "2024-01-15T10:30:00Z",
     "confirmed_at": "2024-01-15T10:30:01Z"
-  }
-}`,
-  },
-  {
-    method: "GET",
-    path: "/api/v1/accounts/:pubkey",
-    description: "Get account information by public key (supports both wallets and blockchain accounts)",
-    params: [{ name: "pubkey", type: "string", description: "Account public key", required: true }],
-    queryParams: [
-      { name: "transactions", type: "boolean", description: "Include recent transactions", default: "false" },
-    ],
-    response: `{
-  "success": true,
-  "data": {
-    "pubkey": "klod_abc123...",
-    "type": "wallet",
-    "balance": 1000,
-    "transactionCount": 15,
-    "totalSent": 500,
-    "totalReceived": 1500,
-    "createdAt": "2024-01-10T08:00:00Z",
-    "recentTransactions": [...]
   }
 }`,
   },
@@ -193,49 +164,47 @@ const endpoints: Endpoint[] = [
     "stats": {
       "totalBlocks": 12345,
       "totalTransactions": 50000,
-      "totalWallets": 150,
+      "totalTokens": 25,
       "activeValidators": 5,
       "currentTps": 2.5
     },
     "transactionTypes": {
       "transfer": 45000,
       "token_transfer": 3000,
-      "faucet_claim": 500,
       "program_call": 1500
     },
     "validators": [...]
   }
 }`,
   },
-  // Tokens (Memecoins)
+  // Tokens
   {
     method: "GET",
-    path: "/api/v1/tokens",
-    description: "Get a list of memecoins with pagination, search, and sorting",
+    path: "/api/tokens",
+    description: "Get a list of tokens launched via Klodchain (real Pump.fun tokens)",
     queryParams: [
       { name: "limit", type: "number", description: "Number of tokens to return (max 100)", default: "20" },
       { name: "offset", type: "number", description: "Number of tokens to skip", default: "0" },
-      { name: "sort", type: "string", description: "Sort by: 'created_at', 'market_cap', 'volume', 'price'", default: "created_at" },
+      { name: "sort", type: "string", description: "Sort by: 'created_at', 'market_cap', 'price'", default: "created_at" },
       { name: "order", type: "string", description: "Sort order: 'asc' or 'desc'", default: "desc" },
-      { name: "search", type: "string", description: "Search by name, symbol, or address" },
+      { name: "search", type: "string", description: "Search by name or symbol" },
     ],
     response: `{
   "success": true,
   "data": [
     {
-      "address": "dogeklod",
-      "name": "Doge Klod",
-      "symbol": "DOGE",
-      "description": "The original meme coin on Klodchain",
+      "id": "uuid",
+      "mint_address": "abc123...",
+      "name": "Test Token",
+      "symbol": "TEST",
+      "description": "A test token",
       "image_url": "https://...",
-      "creator_pubkey": "klod_abc123...",
-      "total_supply": 1000000000000000,
-      "circulating_supply": 200000000000000,
-      "price": 0.000001,
-      "market_cap": 200,
-      "volume_24h": 50.5,
-      "reserve_klod": 4000,
-      "reserve_token": 800000000000000,
+      "creator_wallet": "xyz...",
+      "price_sol": 0.000001,
+      "price_usd": 0.0002,
+      "market_cap_sol": 1000,
+      "market_cap_usd": 200000,
+      "is_graduated": false,
       "created_at": "2024-01-15T10:30:00Z"
     }
   ],
@@ -249,42 +218,34 @@ const endpoints: Endpoint[] = [
   },
   {
     method: "GET",
-    path: "/api/v1/tokens/:address",
-    description: "Get detailed information about a specific token including holder count and recent trades",
-    params: [{ name: "address", type: "string", description: "Token address (ends with 'klod')", required: true }],
+    path: "/api/tokens/:address",
+    description: "Get detailed information about a specific token including recent trades from Birdeye",
+    params: [{ name: "address", type: "string", description: "Token mint address", required: true }],
     response: `{
   "success": true,
   "data": {
-    "address": "dogeklod",
-    "name": "Doge Klod",
-    "symbol": "DOGE",
-    "description": "The original meme coin on Klodchain",
+    "id": "uuid",
+    "mint_address": "abc123...",
+    "name": "Test Token",
+    "symbol": "TEST",
+    "description": "A test token",
     "image_url": "https://...",
-    "twitter_url": "https://twitter.com/...",
-    "website_url": "https://...",
-    "telegram_url": "https://t.me/...",
-    "creator_pubkey": "klod_abc123...",
-    "total_supply": 1000000000000000,
-    "circulating_supply": 200000000000000,
-    "price": 0.000001,
-    "market_cap": 200,
-    "volume_24h": 50.5,
-    "reserve_klod": 4000,
-    "reserve_token": 800000000000000,
-    "holder_count": 42,
+    "creator_wallet": "xyz...",
+    "price_sol": 0.000001,
+    "price_usd": 0.0002,
+    "market_cap_sol": 1000,
+    "market_cap_usd": 200000,
+    "is_graduated": false,
     "recent_trades": [
       {
-        "id": "uuid",
-        "trader_pubkey": "klod_xyz...",
+        "id": "txhash...",
         "trade_type": "buy",
-        "klod_amount": 100000000,
+        "sol_amount": 100000000,
         "token_amount": 50000000000,
-        "price_per_token": 0.000002,
-        "signature": "sig123...",
+        "trader_wallet": "trader...",
         "created_at": "2024-01-15T11:00:00Z"
       }
     ],
-    "volume_24h_calculated": 50.5,
     "created_at": "2024-01-15T10:30:00Z"
   }
 }`,
@@ -460,7 +421,7 @@ export default function ApiDocsPage() {
             <CardTitle className="text-lg">Base URL</CardTitle>
           </CardHeader>
           <CardContent>
-            <CodeBlock code={`${baseUrl}/api/v1`} language="text" />
+            <CodeBlock code={baseUrl} language="text" />
           </CardContent>
         </Card>
       </motion.div>
@@ -494,10 +455,9 @@ X-RateLimit-Reset: 1705312200000`}
         <h2 className="text-2xl font-bold">Endpoints</h2>
 
         <Tabs defaultValue="blocks" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="blocks">Blocks</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="accounts">Accounts</TabsTrigger>
             <TabsTrigger value="tokens">Tokens</TabsTrigger>
             <TabsTrigger value="stats">Stats</TabsTrigger>
           </TabsList>
@@ -512,17 +472,13 @@ X-RateLimit-Reset: 1705312200000`}
             <EndpointCard endpoint={endpoints[3]} />
           </TabsContent>
 
-          <TabsContent value="accounts" className="mt-4">
-            <EndpointCard endpoint={endpoints[4]} />
-          </TabsContent>
-
           <TabsContent value="tokens" className="mt-4">
+            <EndpointCard endpoint={endpoints[5]} />
             <EndpointCard endpoint={endpoints[6]} />
-            <EndpointCard endpoint={endpoints[7]} />
           </TabsContent>
 
           <TabsContent value="stats" className="mt-4">
-            <EndpointCard endpoint={endpoints[5]} />
+            <EndpointCard endpoint={endpoints[4]} />
           </TabsContent>
         </Tabs>
       </motion.div>
@@ -551,13 +507,10 @@ console.log(data);`}
       <motion.div variants={staggerItem} className="text-center text-sm text-muted-foreground py-8">
         <p>Built with Next.js & Supabase</p>
         <div className="flex items-center justify-center gap-4 mt-2">
-          <Link href="/explorer" className="text-primary hover:underline flex items-center gap-1">
+          <Link href="/app/explorer" className="text-primary hover:underline flex items-center gap-1">
             Explorer <ExternalLink className="h-3 w-3" />
           </Link>
-          <Link href="/stats" className="text-primary hover:underline flex items-center gap-1">
-            Stats <ExternalLink className="h-3 w-3" />
-          </Link>
-          <Link href="/tokens" className="text-primary hover:underline flex items-center gap-1">
+          <Link href="/app/tokens" className="text-primary hover:underline flex items-center gap-1">
             Tokens <ExternalLink className="h-3 w-3" />
           </Link>
         </div>

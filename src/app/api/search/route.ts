@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 interface SearchResult {
-  type: "block" | "transaction" | "account" | "validator" | "program" | "wallet" | "wallet_transaction" | "token";
+  type: "block" | "transaction" | "account" | "validator" | "program" | "token";
   url: string;
   label: string;
   sublabel?: string;
@@ -188,97 +188,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Search wallets by pubkey (klod_ addresses)
-    const { data: wallets } = await supabase
-      .from("wallets")
-      .select("pubkey, balance")
-      .ilike("pubkey", `%${query}%`)
-      .limit(5);
-
-    if (wallets) {
-      for (const wallet of wallets) {
-        results.push({
-          type: "wallet",
-          url: `/accounts/${wallet.pubkey}`,
-          label: `Wallet ${wallet.pubkey.slice(0, 12)}...${wallet.pubkey.slice(-6)}`,
-          sublabel: `Balance: ${wallet.balance.toLocaleString()} $klodchain`,
-        });
-      }
-    }
-
-    // Search wallet_transactions by id or pubkeys
-    const { data: walletTxById } = await supabase
-      .from("wallet_transactions")
-      .select("id, from_pubkey, to_pubkey, amount, transaction_type, created_at")
-      .ilike("id", `%${query}%`)
-      .limit(5);
-
-    if (walletTxById) {
-      for (const tx of walletTxById) {
-        results.push({
-          type: "wallet_transaction",
-          url: `/explorer/wallet-tx/${tx.id}`,
-          label: `Wallet TX ${tx.id.slice(0, 8)}...`,
-          sublabel: `${tx.transaction_type} • ${tx.amount} $klodchain`,
-        });
-      }
-    }
-
-    // Search wallet_transactions by from_pubkey
-    const { data: walletTxByFrom } = await supabase
-      .from("wallet_transactions")
-      .select("id, from_pubkey, to_pubkey, amount, transaction_type")
-      .not("from_pubkey", "is", null)
-      .ilike("from_pubkey", `%${query}%`)
-      .limit(5);
-
-    if (walletTxByFrom) {
-      for (const tx of walletTxByFrom) {
-        if (!results.find(r => r.url === `/explorer/wallet-tx/${tx.id}`)) {
-          results.push({
-            type: "wallet_transaction",
-            url: `/explorer/wallet-tx/${tx.id}`,
-            label: `Wallet TX ${tx.id.slice(0, 8)}...`,
-            sublabel: `${tx.transaction_type} • ${tx.amount} $klodchain`,
-          });
-        }
-      }
-    }
-
-    // Search wallet_transactions by to_pubkey
-    const { data: walletTxByTo } = await supabase
-      .from("wallet_transactions")
-      .select("id, from_pubkey, to_pubkey, amount, transaction_type")
-      .ilike("to_pubkey", `%${query}%`)
-      .limit(5);
-
-    if (walletTxByTo) {
-      for (const tx of walletTxByTo) {
-        if (!results.find(r => r.url === `/explorer/wallet-tx/${tx.id}`)) {
-          results.push({
-            type: "wallet_transaction",
-            url: `/explorer/wallet-tx/${tx.id}`,
-            label: `Wallet TX ${tx.id.slice(0, 8)}...`,
-            sublabel: `${tx.transaction_type} • ${tx.amount} $klodchain`,
-          });
-        }
-      }
-    }
-
-    // Search memecoins by address, name, or symbol
+    // Search created tokens by address, name, or symbol
     const { data: tokens } = await supabase
-      .from("memecoins")
-      .select("address, name, symbol, price, market_cap")
-      .or(`address.ilike.%${query}%,name.ilike.%${query}%,symbol.ilike.%${query}%`)
+      .from("created_tokens")
+      .select("mint_address, name, symbol, price_sol")
+      .or(`mint_address.ilike.%${query}%,name.ilike.%${query}%,symbol.ilike.%${query}%`)
       .limit(5);
 
     if (tokens) {
       for (const token of tokens) {
         results.push({
           type: "token",
-          url: `/token/${token.address}`,
+          url: `/app/token/${token.mint_address}`,
           label: `${token.name} ($${token.symbol})`,
-          sublabel: `Price: ${token.price < 0.0001 ? token.price.toExponential(2) : token.price.toFixed(6)} KLOD`,
+          sublabel: token.price_sol ? `Price: ${token.price_sol.toFixed(9)} SOL` : undefined,
         });
       }
     }

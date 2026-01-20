@@ -269,6 +269,43 @@ class BirdeyeClient {
   }
 
   /**
+   * Get multiple token metadata (including logos) in parallel
+   * Fetches token overview for each address concurrently
+   */
+  async getMultipleTokenMetadata(
+    addresses: string[]
+  ): Promise<Map<string, { logoURI: string | null; name: string; symbol: string }>> {
+    const metadata = new Map<string, { logoURI: string | null; name: string; symbol: string }>();
+
+    if (addresses.length === 0) return metadata;
+
+    try {
+      // Fetch all tokens in parallel with a concurrency limit
+      const results = await Promise.allSettled(
+        addresses.map(async (address) => {
+          const info = await this.getTokenOverview(address);
+          return { address, info };
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value.info) {
+          metadata.set(result.value.address, {
+            logoURI: result.value.info.logoURI || null,
+            name: result.value.info.name,
+            symbol: result.value.info.symbol,
+          });
+        }
+      }
+
+      return metadata;
+    } catch (error) {
+      console.error("Birdeye getMultipleTokenMetadata error:", error);
+      return metadata;
+    }
+  }
+
+  /**
    * Get OHLCV (candlestick) data for a token
    * Endpoint: GET /defi/ohlcv
    */

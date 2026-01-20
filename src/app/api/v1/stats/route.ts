@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       txResult,
       validatorsResult,
       latestStatsResult,
-      walletsResult,
+      tokensResult,
     ] = await Promise.all([
       supabase.from("blocks").select("*", { count: "exact", head: true }),
       supabase.from("transactions").select("*", { count: "exact", head: true }),
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
         .order("recorded_at", { ascending: false })
         .limit(1)
         .single(),
-      supabase.from("wallets").select("*", { count: "exact", head: true }),
+      supabase.from("created_tokens").select("*", { count: "exact", head: true }),
     ]);
 
     // Get latest block
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
           stats: {
             totalBlocks: blocksResult.count || 0,
             totalTransactions: txResult.count || 0,
-            totalWallets: walletsResult.count || 0,
+            totalTokens: tokensResult.count || 0,
             activeValidators: validatorsResult.count || 0,
             currentTps: latestStatsResult.data?.tps || 0,
           },

@@ -11,30 +11,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-interface TradingMetrics {
-  totalTrades24h: number;
-  totalVolume24h: number;
-  topTokens: { symbol: string; volume: number; trades: number }[];
-  biggestTrade: { symbol: string; amount: number; type: string } | null;
+interface NetworkMetrics {
   tps: number;
   totalTransactions: number;
-  recentTrades: { symbol: string; type: string; amount: number; time: string }[];
+  totalBlocks: number;
+  totalTokens: number;
 }
 
-async function getTradingMetrics(): Promise<TradingMetrics> {
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-  // Get recent trades
-  const { data: trades } = await supabase
-    .from("memecoin_trades")
-    .select(`
-      *,
-      memecoin:memecoins(symbol, name)
-    `)
-    .gte("created_at", oneDayAgo)
-    .order("created_at", { ascending: false })
-    .limit(100);
-
+async function getNetworkMetrics(): Promise<NetworkMetrics> {
   // Get TPS
   const { data: stats } = await supabase
     .from("network_stats")
@@ -48,44 +32,21 @@ async function getTradingMetrics(): Promise<TradingMetrics> {
     .from("transactions")
     .select("*", { count: "exact", head: true });
 
-  // Process trades
-  const tokenVolumes: Record<string, { volume: number; trades: number; symbol: string }> = {};
-  let biggestTrade: TradingMetrics["biggestTrade"] = null;
+  // Get total blocks
+  const { count: totalBlocks } = await supabase
+    .from("blocks")
+    .select("*", { count: "exact", head: true });
 
-  (trades || []).forEach((trade: any) => {
-    const symbol = trade.memecoin?.symbol || "UNKNOWN";
-    const volume = trade.usdk_amount / 1_000_000; // Convert from base units
-
-    if (!tokenVolumes[symbol]) {
-      tokenVolumes[symbol] = { volume: 0, trades: 0, symbol };
-    }
-    tokenVolumes[symbol].volume += volume;
-    tokenVolumes[symbol].trades += 1;
-
-    if (!biggestTrade || volume > biggestTrade.amount) {
-      biggestTrade = { symbol, amount: volume, type: trade.trade_type };
-    }
-  });
-
-  const topTokens = Object.values(tokenVolumes)
-    .sort((a, b) => b.volume - a.volume)
-    .slice(0, 5);
-
-  const recentTrades = (trades || []).slice(0, 10).map((t: any) => ({
-    symbol: t.memecoin?.symbol || "UNKNOWN",
-    type: t.trade_type,
-    amount: t.usdk_amount / 1_000_000,
-    time: t.created_at,
-  }));
+  // Get total tokens
+  const { count: totalTokens } = await supabase
+    .from("created_tokens")
+    .select("*", { count: "exact", head: true });
 
   return {
-    totalTrades24h: trades?.length || 0,
-    totalVolume24h: Object.values(tokenVolumes).reduce((sum, t) => sum + t.volume, 0),
-    topTokens,
-    biggestTrade,
     tps: stats?.tps || 0,
     totalTransactions: totalTx || 0,
-    recentTrades,
+    totalBlocks: totalBlocks || 0,
+    totalTokens: totalTokens || 0,
   };
 }
 
@@ -100,37 +61,29 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const topic = body.topic || "market_analysis";
+    const topic = body.topic || "network_update";
 
     // Get FLUX personality
     const agent = AGENT_PERSONALITIES.reviewer; // FLUX
 
-    // Get trading metrics
-    const metrics = await getTradingMetrics();
+    // Get network metrics
+    const metrics = await getNetworkMetrics();
 
     // Build context for article generation
-    const contextMessage = `You are writing a short article for X (Twitter) about klodchain trading activity.
+    const contextMessage = `You are writing a short article for X (Twitter) about Klodchain network activity.
 
-Current trading metrics (last 24h):
-- Total trades: ${metrics.totalTrades24h}
-- Total volume: $${metrics.totalVolume24h.toFixed(2)} USDK
+Current network metrics:
 - TPS: ${metrics.tps}
-- Total network transactions: ${metrics.totalTransactions.toLocaleString()}
-
-Top tokens by volume:
-${metrics.topTokens.map((t, i) => `${i + 1}. $${t.symbol}: $${t.volume.toFixed(2)} USDK (${t.trades} trades)`).join("\n")}
-
-${metrics.biggestTrade ? `Biggest trade: ${metrics.biggestTrade.type.toUpperCase()} $${metrics.biggestTrade.symbol} for $${metrics.biggestTrade.amount.toFixed(2)} USDK` : ""}
-
-Recent trades:
-${metrics.recentTrades.map(t => `- ${t.type.toUpperCase()} $${t.symbol}: $${t.amount.toFixed(2)} USDK`).join("\n")}
+- Total transactions: ${metrics.totalTransactions.toLocaleString()}
+- Total blocks: ${metrics.totalBlocks.toLocaleString()}
+- Tokens launched: ${metrics.totalTokens}
 
 Write an article in FLUX's voice (fast, efficient, direct, no BS). The article should:
 1. Have a punchy title (no emoji)
-2. Be 2-3 short paragraphs analyzing the trading activity
+2. Be 2-3 short paragraphs about network activity
 3. Include specific numbers and insights
 4. End with a forward-looking statement
-5. Be written for crypto traders who appreciate directness
+5. Be written for crypto enthusiasts who appreciate directness
 
 Also provide a thread version: 4-5 tweets that could be posted as a thread. Each tweet should be under 280 characters. Format as JSON array of strings.
 
@@ -146,7 +99,7 @@ Respond in this exact JSON format:
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1500,
-      system: agent.systemPrompt + "\n\nYou are now writing a trading analysis article. Respond ONLY with valid JSON, no markdown.",
+      system: agent.systemPrompt + "\n\nYou are now writing a network analysis article. Respond ONLY with valid JSON, no markdown.",
       messages: [
         {
           role: "user",
@@ -183,10 +136,10 @@ Respond in this exact JSON format:
         thread_content: articleData.thread,
         topic,
         metrics: {
-          totalTrades24h: metrics.totalTrades24h,
-          totalVolume24h: metrics.totalVolume24h,
-          topTokens: metrics.topTokens,
           tps: metrics.tps,
+          totalTransactions: metrics.totalTransactions,
+          totalBlocks: metrics.totalBlocks,
+          totalTokens: metrics.totalTokens,
         },
       })
       .select()
@@ -208,9 +161,10 @@ Respond in this exact JSON format:
         content: articleData.content,
         thread: articleData.thread,
         metrics: {
-          totalTrades24h: metrics.totalTrades24h,
-          totalVolume24h: metrics.totalVolume24h,
-          topTokens: metrics.topTokens,
+          tps: metrics.tps,
+          totalTransactions: metrics.totalTransactions,
+          totalBlocks: metrics.totalBlocks,
+          totalTokens: metrics.totalTokens,
         },
         createdAt: article?.created_at,
       },

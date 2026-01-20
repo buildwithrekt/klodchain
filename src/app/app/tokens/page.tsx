@@ -254,6 +254,7 @@ export default function TokensPage() {
                           width={48}
                           height={48}
                           className="rounded-full object-cover"
+                          unoptimized
                         />
                       ) : (
                         <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">

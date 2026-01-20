@@ -60,15 +60,24 @@ export async function GET(req: NextRequest) {
       // Use fallback
     }
 
-    // Get fresh prices from Birdeye for all tokens
+    // Get fresh prices and images from Birdeye for all tokens
     let enrichedTokens = tokens || [];
     try {
       const addresses = (tokens || []).map((t) => t.mint_address);
       if (addresses.length > 0) {
-        const prices = await birdeye.getMultipleTokenPrices(addresses);
+        // Fetch prices and metadata (images) in parallel
+        const [prices, metadata] = await Promise.all([
+          birdeye.getMultipleTokenPrices(addresses),
+          birdeye.getMultipleTokenMetadata(addresses),
+        ]);
 
         enrichedTokens = (tokens || []).map((token) => {
           const priceUsd = prices.get(token.mint_address);
+          const tokenMeta = metadata.get(token.mint_address);
+
+          // Use Birdeye image if DB doesn't have one
+          const imageUrl = token.image_url || tokenMeta?.logoURI || null;
+
           if (priceUsd) {
             const priceInSol = priceUsd / solPrice;
             return {
@@ -76,6 +85,7 @@ export async function GET(req: NextRequest) {
               sol_price: solPrice,
               price_sol: priceInSol,
               price_usd: priceUsd,
+              image_url: imageUrl,
               // Estimate market cap: price * 1B tokens (standard supply)
               market_cap_sol: priceInSol * 1_000_000_000,
               market_cap_usd: priceUsd * 1_000_000_000,
@@ -87,11 +97,12 @@ export async function GET(req: NextRequest) {
             sol_price: solPrice,
             price_usd: token.price_sol ? token.price_sol * solPrice : null,
             market_cap_usd: token.market_cap_sol ? token.market_cap_sol * solPrice : null,
+            image_url: imageUrl,
           };
         });
       }
     } catch (error) {
-      console.error("Failed to fetch prices from Birdeye:", error);
+      console.error("Failed to fetch data from Birdeye:", error);
       // Still add sol_price to all tokens
       enrichedTokens = (tokens || []).map((token) => ({
         ...token,

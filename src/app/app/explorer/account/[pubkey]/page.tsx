@@ -13,22 +13,15 @@ export default async function ExplorerAccountPage({
 }) {
   const { pubkey } = await params;
 
-  // If it's a wallet address (starts with klod_), redirect to wallet page
-  if (pubkey.startsWith("klod_")) {
-    redirect(`/accounts/${pubkey}`);
-  }
+  // Check if it's a token address (Solana base58), redirect to token page
+  const { data: token } = await supabase
+    .from("created_tokens")
+    .select("mint_address")
+    .eq("mint_address", pubkey)
+    .single();
 
-  // If it ends with "klod" (memecoin address), check if it's a token
-  if (pubkey.endsWith("klod")) {
-    const { data: token } = await supabase
-      .from("memecoins")
-      .select("address")
-      .eq("address", pubkey)
-      .single();
-
-    if (token) {
-      redirect(`/token/${pubkey}`);
-    }
+  if (token) {
+    redirect(`/app/token/${pubkey}`);
   }
 
   // Check if it's a blockchain account
@@ -47,7 +40,7 @@ export default async function ExplorerAccountPage({
       .single();
 
     if (validator) {
-      // Show validator info - for now redirect to a simple page
+      // Show validator info
       return (
         <div className="container mx-auto px-4 py-6 max-w-3xl">
           <h1 className="text-2xl font-bold mb-4">Validator</h1>
