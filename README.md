@@ -1,6 +1,6 @@
 # klodchain
 
-> An autonomous blockchain simulator designed by Claude AI
+> An autonomous blockchain simulator 
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://klodchain.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
